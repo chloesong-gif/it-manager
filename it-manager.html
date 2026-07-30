@@ -243,7 +243,7 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
       3. 승인된 JavaScript 원본에 이 페이지가 열리는 주소 추가<br>
       &nbsp;&nbsp;&nbsp;예) <code>http://localhost:8080</code> 또는 도메인<br><br>
       <strong>⚠️ file:// 에서는 동작하지 않습니다.</strong><br>
-      터미널에서 <code>python3 -m http.server 8080</code> 후<br><code>http://localhost:8080</code> 으로 접속하세요.
+      터미널에서 <code>npx serve . -p 8080</code> 후<br><code>http://localhost:8080</code> 으로 접속하세요.
     </div>
   </div>
 </div>
@@ -353,7 +353,7 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
         <select class="filter-sel" id="sub-vendor-filter" onchange="renderSubscriptions()"><option value="">전체 구매처</option></select>
         <select class="filter-sel" id="sub-type-filter" onchange="renderSubscriptions()"><option value="">전체 유형</option></select>
       </div>
-      <div class="table-wrap"><table><thead><tr><th>구매처</th><th>유형</th><th>카테고리</th><th>배정 구성원</th><th>주문일</th><th>종료일</th><th>월 비용</th><th>구매가</th><th></th></tr></thead><tbody id="sub-table"></tbody></table></div>
+      <div class="table-wrap"><table><thead><tr><th>구매처</th><th>유형</th><th>카테고리</th><th>배정 구성원</th><th>제품명</th><th>시리얼</th><th>주문일</th><th>종료일</th><th>월 비용</th><th>구매가</th><th></th></tr></thead><tbody id="sub-table"></tbody></table></div>
     </div>
   </div>
 
@@ -408,7 +408,7 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
       <div class="form-group"><label class="form-label">이름 *</label><input class="form-control" id="emp-name" placeholder="홍길동"></div>
       <div class="form-group"><label class="form-label">역할 *</label>
         <select class="form-control" id="emp-role" onchange="updateAssignSuggest()">
-          <option value="">선택</option><option>백앤드</option><option>프론트</option><option>프로덕트 디자이너</option><option>일반</option><option>기타</option>
+          <option value="">선택</option><option>일반용</option><option>프론트용</option><option>백앤드용</option><option>디자이너용</option><option>기타</option>
         </select>
       </div>
     </div>
@@ -457,6 +457,20 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
       <div class="form-group"><label class="form-label">구매가 (₩)</label><input class="form-control" id="sub-price" type="number" placeholder="0"></div>
     </div>
     <div class="form-group"><label class="form-label">메모</label><input class="form-control" id="sub-notes" placeholder="선택 사항"></div>
+    <hr class="section-divider">
+    <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:10px">📱 기기 정보 (선택)</div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">기기명</label><input class="form-control" id="sub-devicename" placeholder="예: 맥북 프로 14"></div>
+      <div class="form-group"><label class="form-label">제조사</label><input class="form-control" id="sub-manufacturer" placeholder="예: Apple, LG"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">제품명</label><input class="form-control" id="sub-productname" placeholder="예: 맥북프로 14 M5 Pro"></div>
+      <div class="form-group"><label class="form-label">시리얼 넘버</label><input class="form-control" id="sub-serial" placeholder="예: H4MWXX29YJ" style="font-family:monospace"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">모델 번호</label><input class="form-control" id="sub-model" placeholder="예: MGDR4KH/A"></div>
+      <div class="form-group"><label class="form-label">스펙</label><input class="form-control" id="sub-specs" placeholder="예: M5 Pro, 24GB, 1TB, 14인치"></div>
+    </div>
     <div class="form-actions"><button class="btn btn-ghost" onclick="closeModal('modal-add-sub')">취소</button><button class="btn btn-primary" onclick="saveSubscription()">저장</button></div>
   </div>
 </div>
@@ -498,14 +512,28 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
 // ═══════════════════════════════════════════════════════
 let currentUser = null; // { name, email, picture, initials }
 
-function loadClientId() { return localStorage.getItem('itm_client_id') || ''; }
+// OAuth Client ID는 비밀값이 아니라 브라우저에 그대로 노출되는 공개값이므로 하드코딩한다.
+// 이렇게 해야 새 브라우저·새 기기·다른 팀원이 들어와도 초기 설정 화면을 거치지 않는다.
+const DEFAULT_CLIENT_ID = '604983269586-fvinumj21kg27qlekhfv4qv73oeb9e68.apps.googleusercontent.com';
+
+function loadClientId() {
+  const override = localStorage.getItem('itm_client_id');
+  if (override) return override;
+  if (localStorage.getItem('itm_force_setup')) return ''; // '변경' 눌렀을 때만 설정 화면
+  return DEFAULT_CLIENT_ID;
+}
 function saveClientId() {
   const id = document.getElementById('input-client-id').value.trim();
   if (!id) { alert('Client ID를 입력해주세요.'); return; }
   localStorage.setItem('itm_client_id', id);
+  localStorage.removeItem('itm_force_setup');
   initAuth();
 }
-function resetClientId() { localStorage.removeItem('itm_client_id'); location.reload(); }
+function resetClientId() {
+  localStorage.removeItem('itm_client_id');
+  localStorage.setItem('itm_force_setup', '1');
+  location.reload();
+}
 
 function initAuth() {
   const clientId = loadClientId();
@@ -594,7 +622,7 @@ function hide(id) { const el = document.getElementById(id); if(el){ el.style.dis
 // ═══════════════════════════════════════════════════════
 // DATA
 // ═══════════════════════════════════════════════════════
-const STORAGE_KEY = 'itm_v2';
+const STORAGE_KEY = 'itm_v3';
 const HISTORY_KEY = 'itm_history';
 
 let db = { employees:[], subscriptions:[], vendors:[] };
@@ -606,26 +634,70 @@ function loadDB() {
   else {
     db = {
       vendors: [
-        {id:'v1',name:'고위드',url:'',memo:''},
-        {id:'v2',name:'페이시',url:'',memo:''}
+        {id:'v1',name:'고위드',url:'https://gowid.com',memo:'노트북 구독 서비스'},
+        {id:'v2',name:'페이시',url:'https://payhere.in',memo:'노트북 렌탈 서비스'}
       ],
       employees: [
-        {id:'e1',name:'맥스',role:'백앤드',joinDate:'2026-07-01',leaveDate:null,note:''},
-        {id:'e2',name:'준',role:'프론트',joinDate:'2026-07-01',leaveDate:null,note:''},
-        {id:'e3',name:'루시',role:'프로덕트 디자이너',joinDate:'2026-07-30',leaveDate:null,note:''}
+        {id:'e1',name:'맥스',role:'일반용',joinDate:'2026-07-28',leaveDate:null,note:''},
+        {id:'e2',name:'준',role:'프론트용',joinDate:'2026-07-28',leaveDate:null,note:''},
+        {id:'e3',name:'루시',role:'프론트용',joinDate:'2026-07-30',leaveDate:null,note:''}
       ],
       subscriptions: [
-        {id:'s1',vendor:'고위드',type:'백앤드용',category:'subscription',assignedTo:'e1',orderDate:'2026-07-28',endDate:'',monthlyPrice:0,purchasePrice:0,notes:''},
-        {id:'s2',vendor:'고위드',type:'프론트용',category:'subscription',assignedTo:'e2',orderDate:'2026-07-28',endDate:'',monthlyPrice:0,purchasePrice:0,notes:''},
-        {id:'s3',vendor:'고위드',type:'프로덕트 디자이너용',category:'subscription',assignedTo:'e3',orderDate:'2026-07-30',endDate:'',monthlyPrice:0,purchasePrice:0,notes:''},
-        {id:'s4',vendor:'페이시',type:'일반용',category:'subscription',assignedTo:'',orderDate:'2024-12-12',endDate:'2026-12-11',monthlyPrice:15000,purchasePrice:0,notes:''},
-        {id:'s5',vendor:'페이시',type:'일반용',category:'subscription',assignedTo:'',orderDate:'2024-12-12',endDate:'2026-12-11',monthlyPrice:15000,purchasePrice:0,notes:''},
-        {id:'s6',vendor:'페이시',type:'일반용',category:'subscription',assignedTo:'',orderDate:'2024-12-12',endDate:'2026-12-11',monthlyPrice:15000,purchasePrice:0,notes:''},
-        {id:'s7',vendor:'페이시',type:'일반용',category:'subscription',assignedTo:'',orderDate:'2025-01-02',endDate:'2027-01-01',monthlyPrice:15000,purchasePrice:0,notes:''},
-        {id:'s8',vendor:'페이시',type:'일반용',category:'subscription',assignedTo:'',orderDate:'2025-01-02',endDate:'2027-01-01',monthlyPrice:15000,purchasePrice:0,notes:''},
-        {id:'s9',vendor:'페이시',type:'일반용',category:'subscription',assignedTo:'',orderDate:'2025-01-02',endDate:'2027-01-01',monthlyPrice:15000,purchasePrice:0,notes:''},
-        {id:'s10',vendor:'페이시',type:'일반용',category:'subscription',assignedTo:'',orderDate:'2025-01-02',endDate:'2027-01-01',monthlyPrice:15000,purchasePrice:0,notes:''},
-        {id:'s11',vendor:'페이시',type:'일반용',category:'subscription',assignedTo:'',orderDate:'2024-11-21',endDate:'2026-11-20',monthlyPrice:15000,purchasePrice:0,notes:''}
+        {id:'s1',vendor:'고위드',type:'일반용',category:'subscription',assignedTo:'e1',
+         orderDate:'2026-07-28',endDate:'',monthlyPrice:68500,purchasePrice:0,
+         deviceName:'LG 그램 16',manufacturer:'LG',productName:'그램 16',
+         serialNo:'605NZET074228',modelNo:'16Z90TL-GS5WK',
+         specs:'화이트, Ultra5 226V, 16GB, 512GB, 16인치',notes:''},
+        {id:'s2',vendor:'고위드',type:'프론트용',category:'subscription',assignedTo:'e2',
+         orderDate:'2026-07-28',endDate:'',monthlyPrice:137000,purchasePrice:0,
+         deviceName:'맥북 프로 14',manufacturer:'Apple',productName:'맥북 프로 14',
+         serialNo:'H4MWXX29YJ',modelNo:'MGDR4KH/A',
+         specs:'스페이스 블랙, M5 Pro 15코어, 16코어, 24GB, 1TB, 14인치',notes:''},
+        {id:'s3',vendor:'고위드',type:'프론트용',category:'subscription',assignedTo:'e3',
+         orderDate:'2026-07-30',endDate:'',monthlyPrice:137000,purchasePrice:0,
+         deviceName:'맥북 프로 14',manufacturer:'Apple',productName:'맥북 프로 14',
+         serialNo:'HVVH3H730Y',modelNo:'MGDR4KH/A',
+         specs:'스페이스 블랙, M5 Pro 15코어, 16코어, 24GB, 1TB, 14인치',notes:''},
+        {id:'s4',vendor:'페이시',type:'맥북프로 M3 PRO',category:'subscription',assignedTo:'',
+         orderDate:'2024-12-12',endDate:'2026-12-11',monthlyPrice:141620,purchasePrice:0,
+         deviceName:'맥북프로 14 M3 PRO',manufacturer:'Apple',productName:'맥북프로 14 M3 PRO',
+         serialNo:'CK62G6QKG1',modelNo:'',
+         specs:'M3 PRO 12C/18G (18G/1T) 중급형',notes:''},
+        {id:'s5',vendor:'페이시',type:'맥북에어 M3',category:'subscription',assignedTo:'',
+         orderDate:'2024-12-12',endDate:'2026-12-11',monthlyPrice:56260,purchasePrice:0,
+         deviceName:'맥북에어 13 M3',manufacturer:'Apple',productName:'맥북에어 13 M3',
+         serialNo:'K00H2DLX2C',modelNo:'',
+         specs:'M3 8C/8G (16G/256G) 기본형',notes:''},
+        {id:'s6',vendor:'페이시',type:'맥북에어 M3',category:'subscription',assignedTo:'',
+         orderDate:'2024-12-12',endDate:'2026-12-11',monthlyPrice:56260,purchasePrice:0,
+         deviceName:'맥북에어 13 M3',manufacturer:'Apple',productName:'맥북에어 13 M3',
+         serialNo:'J494MXHC9R',modelNo:'',
+         specs:'M3 8C/8G (16G/256G) 기본형',notes:''},
+        {id:'s7',vendor:'페이시',type:'맥북프로 M4 MAX',category:'subscription',assignedTo:'',
+         orderDate:'2025-01-02',endDate:'2027-01-01',monthlyPrice:188180,purchasePrice:0,
+         deviceName:'맥북프로 14 M4 MAX',manufacturer:'Apple',productName:'맥북프로 14 M4 MAX',
+         serialNo:'J2V6L23JGK',modelNo:'',
+         specs:'M4 MAX 14C/32G (36G/1T) 고급형',notes:''},
+        {id:'s8',vendor:'페이시',type:'맥북프로 M4 MAX',category:'subscription',assignedTo:'',
+         orderDate:'2025-01-02',endDate:'2027-01-01',monthlyPrice:188180,purchasePrice:0,
+         deviceName:'맥북프로 14 M4 MAX',manufacturer:'Apple',productName:'맥북프로 14 M4 MAX',
+         serialNo:'G4XRGXC2CM',modelNo:'',
+         specs:'M4 MAX 14C/32G (36G/1T) 고급형',notes:''},
+        {id:'s9',vendor:'페이시',type:'맥북프로 M4 PRO 16',category:'subscription',assignedTo:'',
+         orderDate:'2025-01-02',endDate:'2027-01-01',monthlyPrice:147440,purchasePrice:0,
+         deviceName:'맥북프로 16 M4 PRO',manufacturer:'Apple',productName:'맥북프로 16 M4 PRO',
+         serialNo:'JCW3JX5R9M',modelNo:'',
+         specs:'M4 PRO 14C/20G (48G/512G) 중급형',notes:''},
+        {id:'s10',vendor:'페이시',type:'맥북프로 M4 PRO 14',category:'subscription',assignedTo:'',
+         orderDate:'2025-01-02',endDate:'2027-01-01',monthlyPrice:127070,purchasePrice:0,
+         deviceName:'맥북프로 14 M4 PRO',manufacturer:'Apple',productName:'맥북프로 14 M4 PRO',
+         serialNo:'M7M0V9RH3Y',modelNo:'',
+         specs:'M4 PRO 14C/20G (24G/1T) 중급형',notes:''},
+        {id:'s11',vendor:'페이시',type:'맥북에어 M3',category:'subscription',assignedTo:'',
+         orderDate:'2024-11-21',endDate:'2026-11-20',monthlyPrice:56260,purchasePrice:0,
+         deviceName:'맥북에어 13 M3',manufacturer:'Apple',productName:'맥북에어 13 M3',
+         serialNo:'KG6HFHWF75',modelNo:'',
+         specs:'M3 8C/8G (16G/256G) 기본형',notes:''}
       ]
     };
     saveDB();
@@ -897,16 +969,20 @@ function renderSubscriptions(){
   if(vf) list=list.filter(s=>s.vendor===vf);
   if(tf) list=list.filter(s=>s.type===tf);
   const tbody=document.getElementById('sub-table');
-  if(!list.length){tbody.innerHTML=`<tr><td colspan="9"><div class="empty"><div class="ei">📋</div><div class="et">항목 없음</div></div></td></tr>`;return;}
+  if(!list.length){tbody.innerHTML=`<tr><td colspan="11"><div class="empty"><div class="ei">📋</div><div class="et">항목 없음</div></div></td></tr>`;return;}
   tbody.innerHTML=list.map(s=>{
     const emp=s.assignedTo?empById(s.assignedTo):null;
     const dl=daysLeft(s.endDate);
     const endBadge=s.endDate?`${s.endDate} <span class="badge ${dl<=0?'badge-expired':dl<=30?'badge-expiring':dl<=90?'badge-warn':'badge-ok'}">${dl<=0?'만료':dl+'일'}</span>`:'<span style="color:var(--text-muted)">—</span>';
     const catB=s.category==='subscription'?'<span class="badge badge-sub">구독</span>':'<span class="badge badge-asset">자산</span>';
+    const prodName=s.productName||s.deviceName||'—';
+    const serial=s.serialNo?`<span style="font-family:monospace;font-size:11px;color:var(--text-muted)">${s.serialNo}</span>`:'<span style="color:var(--text-muted)">—</span>';
     return `<tr>
       <td><span class="badge badge-primary">${s.vendor}</span></td>
       <td>${s.type}</td><td>${catB}</td>
       <td>${emp?`<span class="chip chip-member">${emp.name}</span>`:'<span style="color:var(--text-muted);font-size:12px">재고</span>'}</td>
+      <td style="max-width:140px"><div style="font-size:12px;font-weight:600">${prodName}</div>${s.specs?`<div style="font-size:10px;color:var(--text-muted)">${s.specs}</div>`:''}</td>
+      <td>${serial}</td>
       <td>${s.orderDate||'—'}</td><td>${endBadge}</td>
       <td>${s.monthlyPrice?fmtPrice(s.monthlyPrice):'—'}</td>
       <td>${s.purchasePrice?fmtPrice(s.purchasePrice):'—'}</td>
@@ -928,6 +1004,12 @@ function openAddSub(){
   document.getElementById('sub-monthly').value='';
   document.getElementById('sub-price').value='';
   document.getElementById('sub-notes').value='';
+  document.getElementById('sub-devicename').value='';
+  document.getElementById('sub-manufacturer').value='';
+  document.getElementById('sub-productname').value='';
+  document.getElementById('sub-serial').value='';
+  document.getElementById('sub-model').value='';
+  document.getElementById('sub-specs').value='';
   populateSubAssigned('');
   populateVendorDatalist();
   openModal('modal-add-sub');
@@ -945,6 +1027,12 @@ function editSub(id){
   document.getElementById('sub-monthly').value=s.monthlyPrice;
   document.getElementById('sub-price').value=s.purchasePrice;
   document.getElementById('sub-notes').value=s.notes;
+  document.getElementById('sub-devicename').value=s.deviceName||'';
+  document.getElementById('sub-manufacturer').value=s.manufacturer||'';
+  document.getElementById('sub-productname').value=s.productName||'';
+  document.getElementById('sub-serial').value=s.serialNo||'';
+  document.getElementById('sub-model').value=s.modelNo||'';
+  document.getElementById('sub-specs').value=s.specs||'';
   populateSubAssigned(s.assignedTo||'');
   populateVendorDatalist();
   openModal('modal-add-sub');
@@ -962,7 +1050,7 @@ function saveSubscription(){
   const category=document.getElementById('sub-category').value;
   if(!vendor||!type){alert('구매처와 유형은 필수입니다.');return;}
   const editId=document.getElementById('edit-sub-id').value;
-  const data={vendor,type,category,assignedTo:document.getElementById('sub-assigned').value,orderDate:document.getElementById('sub-order').value,endDate:document.getElementById('sub-end').value,monthlyPrice:Number(document.getElementById('sub-monthly').value)||0,purchasePrice:Number(document.getElementById('sub-price').value)||0,notes:document.getElementById('sub-notes').value.trim()};
+  const data={vendor,type,category,assignedTo:document.getElementById('sub-assigned').value,orderDate:document.getElementById('sub-order').value,endDate:document.getElementById('sub-end').value,monthlyPrice:Number(document.getElementById('sub-monthly').value)||0,purchasePrice:Number(document.getElementById('sub-price').value)||0,notes:document.getElementById('sub-notes').value.trim(),deviceName:document.getElementById('sub-devicename').value.trim(),manufacturer:document.getElementById('sub-manufacturer').value.trim(),productName:document.getElementById('sub-productname').value.trim(),serialNo:document.getElementById('sub-serial').value.trim(),modelNo:document.getElementById('sub-model').value.trim(),specs:document.getElementById('sub-specs').value.trim()};
   if(!db.vendors.find(v=>v.name===vendor)) db.vendors.push({id:uid(),name:vendor,url:'',memo:''});
   if(editId){
     const idx=db.subscriptions.findIndex(s=>s.id===editId);
