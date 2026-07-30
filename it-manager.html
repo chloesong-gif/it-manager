@@ -109,16 +109,29 @@ tbody tr:hover{background:#fafafa}
 .preset-btn.active{background:var(--primary-light);border-color:var(--primary);color:var(--primary)}
 
 /* ── 표에서 바로 수정 ── */
-/* 평소엔 일반 텍스트처럼, 마우스를 올리거나 편집 중일 때만 입력칸으로 보이게 한다 */
-.inline-edit{border:1px solid transparent;background:transparent;border-radius:6px;padding:4px 6px;font-size:13px;font-family:inherit;color:var(--text);width:100%;min-width:74px;cursor:pointer;transition:all .12s}
-.inline-edit:hover{border-color:var(--border);background:var(--surface)}
-.inline-edit:focus{outline:none;border-color:var(--primary);background:var(--surface);box-shadow:0 0 0 3px rgba(79,70,229,.1);cursor:text}
-.inline-edit.inline-empty{color:var(--text-muted)}
+/* 평소엔 평범한 텍스트로 두고, 클릭했을 때만 입력 컨트롤로 바꾼다.
+   셀마다 select를 상시 렌더하면 표가 입력 폼처럼 보여 가독성이 무너진다. */
+td.editable{position:relative;cursor:pointer;white-space:nowrap}
+td.editable:hover{background:var(--primary-light)}
+td.editable .ev{border-bottom:1px dashed transparent;padding-bottom:1px}
+tr:hover td.editable .ev{border-bottom-color:var(--border)}
+td.editable .placeholder{color:#c4c8d0}
+.inline-edit{border:1px solid var(--primary);background:var(--surface);border-radius:6px;padding:4px 6px;
+  font-size:13px;font-family:inherit;color:var(--text);width:100%;min-width:88px;
+  box-shadow:0 0 0 3px rgba(79,70,229,.1)}
+.inline-edit:focus{outline:none}
 .inline-edit.num{text-align:right}
-td.editable{position:relative}
-td.editable::after{content:'✎';position:absolute;top:50%;right:4px;transform:translateY(-50%);font-size:9px;color:var(--border);pointer-events:none;opacity:0;transition:opacity .12s}
-tr:hover td.editable::after{opacity:1}
-.grade-stars{color:#f59e0b;letter-spacing:-1px}
+.grade-stars{color:#f59e0b;letter-spacing:.5px;font-size:11px}
+
+/* ── 표 가독성 ── */
+.badge,.chip{white-space:nowrap}
+#sub-table td{vertical-align:middle}
+#sub-table .prod{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px}
+#sub-table .spec{font-size:10px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px}
+#sub-table .serial{font-family:monospace;font-size:11px;color:var(--text-muted);white-space:nowrap}
+#sub-table .amt{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+#sub-table .date{white-space:nowrap;font-variant-numeric:tabular-nums}
+#sub-table th{white-space:nowrap}
 
 /* ── Badges ── */
 .badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:700}
@@ -292,11 +305,11 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
     <div class="sub">자산·구독 관리</div>
   </div>
   <nav class="sidebar-nav">
-    <div class="nav-group-label">개요</div>
-    <div class="nav-item active" onclick="navigate('dashboard')"><span class="ni">📊</span> 대시보드</div>
     <div class="nav-group-label">관리</div>
+    <div class="nav-item active" onclick="navigate('subscriptions')"><span class="ni">📋</span> 구독·자산</div>
     <div class="nav-item" onclick="navigate('employees')"><span class="ni">👥</span> 구성원</div>
-    <div class="nav-item" onclick="navigate('subscriptions')"><span class="ni">📋</span> 구독·자산</div>
+    <div class="nav-group-label">개요</div>
+    <div class="nav-item" onclick="navigate('dashboard')"><span class="ni">📊</span> 대시보드</div>
     <div class="nav-group-label">분석</div>
     <div class="nav-item" onclick="navigate('costs')"><span class="ni">💰</span> 비용 관리</div>
     <div class="nav-item" onclick="navigate('vendors')"><span class="ni">🏢</span> 구매처</div>
@@ -315,7 +328,7 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
 <main class="main">
 
   <!-- ▸ Dashboard -->
-  <div id="page-dashboard" class="page active">
+  <div id="page-dashboard" class="page">
     <div class="page-header">
       <div class="page-title">대시보드 <span id="today-date"></span></div>
       <button class="btn btn-primary" onclick="openAddSub()">＋ 구독·자산 추가</button>
@@ -356,7 +369,7 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
   </div>
 
   <!-- ▸ Subscriptions -->
-  <div id="page-subscriptions" class="page">
+  <div id="page-subscriptions" class="page active">
     <div class="page-header">
       <div class="page-title">구독·자산 관리</div>
       <button class="btn btn-primary" onclick="openAddSub()">＋ 추가</button>
@@ -402,7 +415,7 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
     <div id="vendor-cards" class="vendor-cards"></div>
     <div class="card" style="padding:0">
       <div class="card-header" style="padding:14px 14px 0"><div class="card-title">라이선스 재고 현황</div></div>
-      <div class="table-wrap" style="padding:0 0 4px"><table><thead><tr><th>구매처</th><th>유형</th><th>총 수량</th><th>배정됨</th><th>미배정</th><th>사용률</th></tr></thead><tbody id="vendor-pool-table"></tbody></table></div>
+      <div class="table-wrap" style="padding:0 0 4px"><table><thead><tr><th>구매처</th><th>제품</th><th>총 수량</th><th>배정됨</th><th>미배정</th><th>대당 월 구독비</th><th>월 합계</th><th>사용률</th></tr></thead><tbody id="vendor-pool-table"></tbody><tfoot id="vendor-pool-foot"></tfoot></table></div>
     </div>
   </div>
 
@@ -630,7 +643,7 @@ function enterApp() {
   document.getElementById('sidebar-name').textContent = currentUser.name;
   document.getElementById('sidebar-email').textContent = currentUser.email;
   loadDB();
-  renderDashboard();
+  renderSubscriptions(); // 로그인 후 첫 화면은 구독·자산
 }
 
 function logout() {
@@ -678,8 +691,8 @@ function loadDB() {
   else {
     db = {
       vendors: [
-        {id:'v1',name:'고위드',url:'https://gowid.com',memo:'노트북 구독 서비스'},
-        {id:'v2',name:'페이시',url:'https://payhere.in',memo:'노트북 렌탈 서비스'}
+        {id:'v1',name:'고위드',url:'https://www.gowid.com/newpages/spend-optimization/devices',memo:'노트북 구독 서비스'},
+        {id:'v2',name:'페이시',url:'https://www.pacey.co.kr/mypage/index.php',memo:'노트북 렌탈 서비스'}
       ],
       employees: [
         {id:'e1',name:'맥스',joinDate:'2026-08-03',leaveDate:null,note:''},
@@ -807,7 +820,7 @@ function clearHistory() {
 // ═══════════════════════════════════════════════════════
 // NAVIGATION
 // ═══════════════════════════════════════════════════════
-let currentPage = 'dashboard';
+let currentPage = 'subscriptions';
 function navigate(page) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -1051,32 +1064,28 @@ function renderSubscriptions(){
   if(gf) list=list.filter(s=>gf==='__none__'?!s.grade:s.grade===gf);
   const tbody=document.getElementById('sub-table');
   if(!list.length){tbody.innerHTML=`<tr><td colspan="11"><div class="empty"><div class="ei">📋</div><div class="et">항목 없음</div></div></td></tr>`;return;}
-  const empOpts=activeEmps();
   tbody.innerHTML=list.map(s=>{
     const dl=daysLeft(s.endDate);
     const dueBadge=s.endDate?` <span class="badge ${dl<=0?'badge-expired':dl<=30?'badge-expiring':dl<=90?'badge-warn':'badge-ok'}">${dl<=0?'만료':dl+'일'}</span>`:'';
     const prodName=s.productName||s.deviceName||'—';
-    const serial=s.serialNo?`<span style="font-family:monospace;font-size:11px;color:var(--text-muted)">${s.serialNo}</span>`:'<span style="color:var(--text-muted)">—</span>';
     // 구독이면 월 구독료, 구매면 구매가 — 구분에 따라 해당하는 금액만 편집한다.
     const isSub=s.category==='subscription';
     const amtField=isSub?'monthlyPrice':'purchasePrice';
     const amtVal=isSub?s.monthlyPrice:s.purchasePrice;
-    const sel=(field,opts,cur)=>`<select class="inline-edit${cur?'':' inline-empty'}" onchange="inlineSub('${s.id}','${field}',this.value)">${opts}</select>`;
+    // 나머지는 전부 계약서에 박힌 값이라 표에서 못 고친다. 오타 정정은 '상세'에서.
+    // 표에서 바꾸는 건 실제로 자주 변하는 배정 구성원 하나뿐.
+    const stars=gradeStars(s.grade);
     return `<tr>
       <td><span class="badge badge-primary">${s.vendor}</span></td>
-      <td class="editable">${sel('deviceType',
-        `<option value="">미지정</option>`+DEVICE_TYPES.map(t=>`<option ${t===s.deviceType?'selected':''}>${t}</option>`).join(''), s.deviceType)}</td>
-      <td class="editable">${sel('grade',
-        `<option value="">미지정</option>`+GRADES.map(g=>`<option value="${g.key}" ${g.key===s.grade?'selected':''}>${gradeLabel(g.key)}</option>`).join(''), s.grade)}</td>
-      <td class="editable">${sel('category',
-        `<option value="subscription" ${isSub?'selected':''}>구독</option><option value="asset" ${!isSub?'selected':''}>구매</option>`, true)}</td>
-      <td class="editable">${sel('assignedTo',
-        `<option value="">재고</option>`+empOpts.map(e=>`<option value="${e.id}" ${e.id===s.assignedTo?'selected':''}>${e.name}</option>`).join(''), s.assignedTo)}</td>
-      <td style="max-width:140px"><div style="font-size:12px;font-weight:600">${prodName}</div>${s.specs?`<div style="font-size:10px;color:var(--text-muted)">${s.specs}</div>`:''}</td>
-      <td>${serial}</td>
-      <td>${s.orderDate||'—'}</td>
-      <td class="editable" style="min-width:150px"><input type="date" class="inline-edit${s.endDate?'':' inline-empty'}" value="${s.endDate||''}" onchange="inlineSub('${s.id}','endDate',this.value)">${dueBadge}</td>
-      <td class="editable" style="min-width:110px"><input type="number" class="inline-edit num${amtVal?'':' inline-empty'}" value="${amtVal||''}" placeholder="0" onchange="inlineSub('${s.id}','${amtField}',this.value)"><div style="font-size:10px;color:var(--text-muted);padding-left:6px">${isSub?'월 구독료':'구매가'}</div></td>
+      <td>${s.deviceType||'<span style="color:var(--text-muted)">—</span>'}</td>
+      <td>${s.grade?`${s.grade}${stars?` <span class="grade-stars">${'★'.repeat(stars)}</span>`:''}`:'<span style="color:var(--text-muted)">미지정</span>'}</td>
+      <td>${isSub?'<span class="badge badge-sub">구독</span>':'<span class="badge badge-asset">구매</span>'}</td>
+      <td class="editable" title="클릭해서 배정 변경" onclick="editCell(this,'${s.id}','assignedTo')"><span class="ev${s.assignedTo?'':' placeholder'}">${s.assignedTo?`<span class="chip chip-member">${empById(s.assignedTo)?.name||'?'}</span>`:'재고'}</span></td>
+      <td><div class="prod" title="${prodName}">${prodName}</div>${s.specs?`<div class="spec" title="${s.specs}">${s.specs}</div>`:''}</td>
+      <td class="serial">${s.serialNo||'—'}</td>
+      <td class="date">${s.orderDate||'—'}</td>
+      <td class="date">${s.endDate?`${s.endDate}${dueBadge}`:'<span style="color:var(--text-muted)">무기한</span>'}</td>
+      <td class="amt">${amtVal?fmtPrice(amtVal):'<span style="color:var(--text-muted)">—</span>'}</td>
       <td><div class="actions-cell">
         <button class="btn btn-ghost btn-sm" onclick="editSub('${s.id}')">상세</button>
         <button class="btn btn-danger btn-sm" onclick="deleteSub('${s.id}')">삭제</button>
@@ -1092,13 +1101,39 @@ function fieldText(field,v){
   if(field==='monthlyPrice'||field==='purchasePrice') return Number(v)?fmtPrice(v):'—';
   return v||'—';
 }
+// 셀을 클릭한 순간에만 선택 컨트롤을 만들고, 값을 정하면 즉시 표로 되돌린다.
+// 표에서 고칠 수 있는 건 배정 구성원뿐 — 나머지는 계약서 값이라 '상세'에서만 수정한다.
+function editCell(td,id,field){
+  if(td.querySelector('.inline-edit')) return; // 이미 편집 중
+  const s=db.subscriptions.find(x=>x.id===id);
+  if(!s) return;
+  const cur=s.assignedTo||'';
+  const opt=(v,label)=>`<option value="${v}" ${v===cur?'selected':''}>${label}</option>`;
+  const el=document.createElement('select');
+  el.className='inline-edit';
+  el.innerHTML=opt('','재고')+activeEmps().map(e=>opt(e.id,e.name)).join('');
+  td.innerHTML=''; td.appendChild(el);
+  el.focus();
+  if(el.showPicker){ try{ el.showPicker(); }catch(e){} }
+  let done=false;
+  const finish=commit=>{
+    if(done) return; done=true;
+    if(commit) inlineSub(id,field,el.value); else renderSubscriptions();
+  };
+  el.addEventListener('change',()=>finish(true));
+  el.addEventListener('blur',()=>finish(true));
+  el.addEventListener('keydown',ev=>{
+    if(ev.key==='Enter') finish(true);
+    if(ev.key==='Escape') finish(false);
+  });
+}
 function inlineSub(id,field,value){
   const s=db.subscriptions.find(x=>x.id===id);
   if(!s) return;
   const isNum=field==='monthlyPrice'||field==='purchasePrice';
   const next=isNum?(Number(value)||0):value;
   const prev=s[field];
-  if(String(prev??'')===String(next??'')) return;
+  if(String(prev??'')===String(next??'')){ renderSubscriptions(); return; } // 값이 그대로여도 편집 상태는 풀어야 한다
   s[field]=next;
   // 구독↔구매를 바꾸면 반대쪽 금액은 의미가 없어지므로 비운다.
   if(field==='category'){
@@ -1290,13 +1325,29 @@ function renderCosts(){
 // ═══════════════════════════════════════════════════════
 function renderVendors(){
   document.getElementById('vendor-cards').innerHTML=db.vendors.map(v=>`<div class="vendor-card"><div class="vname">${v.name}</div>${v.url?`<a class="vlink" href="${v.url}" target="_blank">🔗 관리자 페이지</a>`:`<span style="font-size:11px;color:var(--text-muted)">URL 없음</span>`}${v.memo?`<div style="font-size:11px;color:var(--text-muted);margin-top:5px">${v.memo}</div>`:''}</div>`).join('')||'<div style="color:var(--text-muted)">구매처 없음</div>';
+  // 같은 제품끼리 묶어서 대당 구독비와 월 합계를 함께 보여준다.
   const poolMap={};
-  db.subscriptions.forEach(s=>{const k=s.vendor+'||'+subLabel(s);poolMap[k]=poolMap[k]||{vendor:s.vendor,type:subLabel(s),total:0,assigned:0};poolMap[k].total++;if(s.assignedTo)poolMap[k].assigned++;});
-  document.getElementById('vendor-pool-table').innerHTML=Object.values(poolMap).sort((a,b)=>a.vendor.localeCompare(b.vendor)).map(r=>{
+  db.subscriptions.forEach(s=>{
+    const k=s.vendor+'||'+subLabel(s);
+    poolMap[k]=poolMap[k]||{vendor:s.vendor,type:subLabel(s),total:0,assigned:0,unit:0,monthly:0};
+    const p=poolMap[k];
+    p.total++;
+    if(s.assignedTo) p.assigned++;
+    if(s.category==='subscription'){
+      const m=Number(s.monthlyPrice)||0;
+      p.monthly+=m;
+      if(m) p.unit=m; // 같은 제품이면 대당 단가는 동일
+    }
+  });
+  const rows=Object.values(poolMap).sort((a,b)=>b.monthly-a.monthly||a.vendor.localeCompare(b.vendor));
+  document.getElementById('vendor-pool-table').innerHTML=rows.map(r=>{
     const pct=r.total?Math.round(r.assigned/r.total*100):0;
     const fc=pct===100?'full':pct>=80?'warn':'';
-    return `<tr><td><span class="badge badge-primary">${r.vendor}</span></td><td>${r.type}</td><td>${r.total}</td><td>${r.assigned}</td><td>${r.total-r.assigned}</td><td style="min-width:110px"><div class="pool-bar"><div class="pool-bar-fill ${fc}" style="width:${pct}%"></div></div><div class="pool-row"><span>${pct}%</span><span>${r.assigned}/${r.total}</span></div></td></tr>`;
-  }).join('')||'<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:16px">데이터 없음</td></tr>';
+    return `<tr><td><span class="badge badge-primary">${r.vendor}</span></td><td>${r.type}</td><td>${r.total}</td><td>${r.assigned}</td><td>${r.total-r.assigned}</td><td class="amt">${r.unit?fmtPrice(r.unit):'—'}</td><td class="amt"><strong>${r.monthly?fmtPrice(r.monthly):'—'}</strong></td><td style="min-width:110px"><div class="pool-bar"><div class="pool-bar-fill ${fc}" style="width:${pct}%"></div></div><div class="pool-row"><span>${pct}%</span><span>${r.assigned}/${r.total}</span></div></td></tr>`;
+  }).join('')||'<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:16px">데이터 없음</td></tr>';
+  const totalQty=rows.reduce((a,r)=>a+r.total,0), totalMonthly=rows.reduce((a,r)=>a+r.monthly,0);
+  document.getElementById('vendor-pool-foot').innerHTML=rows.length
+    ?`<tr style="background:var(--bg);font-weight:700"><td colspan="2">합계</td><td>${totalQty}</td><td colspan="3"></td><td class="amt">${fmtPrice(totalMonthly)}</td><td></td></tr>`:'';
 }
 function saveVendor(){
   const name=document.getElementById('vendor-name').value.trim();
