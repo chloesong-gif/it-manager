@@ -102,6 +102,18 @@ tbody tr:hover{background:#fafafa}
 
 .hint-inline{font-size:11px;color:var(--text-muted);background:var(--bg);border-radius:7px;padding:7px 11px;margin-bottom:10px}
 
+/* ── 목록 관리 ── */
+.list-head{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px}
+.chip-list{display:flex;flex-wrap:wrap;gap:5px;min-height:30px;margin-bottom:9px}
+.mng-chip{display:inline-flex;align-items:center;gap:5px;background:var(--bg);border:1px solid var(--border);border-radius:16px;padding:3px 5px 3px 10px;font-size:12px;white-space:nowrap}
+.mng-chip .st{color:#f59e0b;font-size:10px}
+.mng-chip .cnt{color:var(--text-muted);font-size:10px}
+.mng-chip button{border:none;background:none;cursor:pointer;color:var(--text-muted);font-size:14px;line-height:1;padding:0 3px;border-radius:50%}
+.mng-chip button:hover{color:var(--danger);background:var(--danger-light)}
+.mng-add{display:flex;gap:5px}
+.mng-add input{flex:1;min-width:0;padding:6px 9px;border:1px solid var(--border);border-radius:7px;font-size:12px;font-family:inherit}
+.mng-add input:focus{outline:none;border-color:var(--primary)}
+
 /* ── 종료일 프리셋 ── */
 .preset-row{display:flex;gap:5px;margin-bottom:6px}
 .preset-btn{flex:1;padding:5px 0;border:1px solid var(--border);background:var(--surface);border-radius:6px;font-size:11px;font-weight:600;color:var(--text-muted);cursor:pointer;transition:all .12s}
@@ -418,6 +430,28 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
       <div class="card-header" style="padding:14px 14px 0"><div class="card-title">라이선스 재고 현황</div></div>
       <div class="table-wrap" style="padding:0 0 4px"><table><thead><tr><th>구매처</th><th>제품</th><th>총 수량</th><th>배정됨</th><th>미배정</th><th>대당 월 구독비</th><th>월 합계</th><th>사용률</th></tr></thead><tbody id="vendor-pool-table"></tbody><tfoot id="vendor-pool-foot"></tfoot></table></div>
     </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-title">목록 관리</div></div>
+      <div class="hint-inline">입력칸에 새 값을 치면 자동으로 추가됩니다. 여기서는 잘못 들어간 항목을 지우거나 등급 별점을 조정합니다.</div>
+      <div class="grid-3">
+        <div>
+          <div class="list-head">구매처</div>
+          <div id="mng-vendors" class="chip-list"></div>
+          <div class="mng-add"><input id="mng-vendor-input" placeholder="새 구매처" onkeydown="if(event.key==='Enter')addVendorItem()"><button class="btn btn-ghost btn-sm" onclick="addVendorItem()">추가</button></div>
+        </div>
+        <div>
+          <div class="list-head">장비 유형</div>
+          <div id="mng-types" class="chip-list"></div>
+          <div class="mng-add"><input id="mng-type-input" placeholder="새 유형" onkeydown="if(event.key==='Enter')addTypeItem()"><button class="btn btn-ghost btn-sm" onclick="addTypeItem()">추가</button></div>
+        </div>
+        <div>
+          <div class="list-head">등급</div>
+          <div id="mng-grades" class="chip-list"></div>
+          <div class="mng-add"><input id="mng-grade-input" placeholder="새 등급" onkeydown="if(event.key==='Enter')addGradeItem()"><input id="mng-grade-stars" type="number" min="0" max="5" value="0" style="max-width:52px" title="별점"><button class="btn btn-ghost btn-sm" onclick="addGradeItem()">추가</button></div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- ▸ History -->
@@ -476,10 +510,22 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
       <div class="form-group"><label class="form-label">구분 *</label><select class="form-control" id="sub-category" onchange="onCategoryChange()"><option value="subscription">구독</option><option value="asset">구매</option></select></div>
     </div>
     <div class="form-row">
-      <div class="form-group"><label class="form-label">장비 유형 *</label><select class="form-control" id="sub-devicetype"></select></div>
-      <div class="form-group"><label class="form-label">등급</label><select class="form-control" id="sub-grade"></select></div>
+      <div class="form-group"><label class="form-label">장비 유형 *</label>
+        <input class="form-control" id="sub-devicetype" list="devicetype-list" placeholder="노트북" autocomplete="off">
+        <datalist id="devicetype-list"></datalist>
+        <div class="form-hint">목록에 없으면 그냥 입력하세요. 새 유형으로 저장됩니다.</div>
+      </div>
+      <div class="form-group"><label class="form-label">등급</label>
+        <input class="form-control" id="sub-grade" list="grade-list" placeholder="프론트용" autocomplete="off">
+        <datalist id="grade-list"></datalist>
+        <div class="form-hint">새 등급은 별점 0으로 추가됩니다.</div>
+      </div>
     </div>
-    <div class="form-group"><label class="form-label">배정 구성원</label><select class="form-control" id="sub-assigned"><option value="">미배정 (재고)</option></select></div>
+    <div class="form-group"><label class="form-label">배정 구성원</label>
+      <input class="form-control" id="sub-assigned" list="employee-list" placeholder="비워두면 재고" autocomplete="off">
+      <datalist id="employee-list"></datalist>
+      <div class="form-hint">새 이름을 치면 구성원으로 자동 등록됩니다.</div>
+    </div>
     <div class="form-row">
       <div class="form-group"><label class="form-label">주문일</label><input class="form-control" id="sub-order" type="date" onchange="refreshEndPreset()"></div>
       <div class="form-group"><label class="form-label">종료일</label>
@@ -697,14 +743,45 @@ const HISTORY_KEY = 'itm_history';
 
 // 장비 유형(품목)과 등급(사양 티어)은 서로 다른 축이다.
 // 등급은 사람이 아니라 장비에 붙는다 — 재배정·매각 시 사양을 알아야 하기 때문.
-const DEVICE_TYPES = ['노트북','모니터','이어폰','마우스','키보드','기타'];
-const GRADES = [
+//
+// 두 목록 모두 코드 상수가 아니라 db.settings에 저장한다. 입력칸에 없는 값을
+// 새로 치면 그대로 목록에 추가되고, 다음부터 자동완성에 뜬다.
+const DEFAULT_DEVICE_TYPES = ['노트북','모니터','이어폰','마우스','키보드','기타'];
+const DEFAULT_GRADES = [
   { key:'일반용',   stars:0 },
   { key:'프디용',   stars:2 },
   { key:'프론트용', stars:3 },
   { key:'백엔드용', stars:4 }
 ];
-function gradeStars(g) { const f=GRADES.find(x=>x.key===g); return f?f.stars:0; }
+function deviceTypes() { return (db.settings&&db.settings.deviceTypes)||DEFAULT_DEVICE_TYPES; }
+function grades()      { return (db.settings&&db.settings.grades)||DEFAULT_GRADES; }
+function gradeStars(g) { const f=grades().find(x=>x.key===g); return f?f.stars:0; }
+// 목록에 없는 값을 입력하면 그대로 추가한다. 오타도 새 항목이 되므로
+// 잘못 들어간 건 구매처 페이지의 '목록 관리'에서 지운다.
+function ensureDeviceType(t) {
+  if(!t) return;
+  if(!db.settings.deviceTypes.includes(t)){ db.settings.deviceTypes.push(t); addHistory('add',`장비 유형 추가: ${t}`,''); }
+}
+function ensureGrade(g) {
+  if(!g) return;
+  if(!db.settings.grades.some(x=>x.key===g)){ db.settings.grades.push({key:g,stars:0}); addHistory('add',`등급 추가: ${g}`,'별점 0 — 목록 관리에서 조정'); }
+}
+function ensureVendor(v) {
+  if(!v) return;
+  if(!db.vendors.find(x=>x.name===v)){ db.vendors.push({id:uid(),name:v,url:'',memo:''}); addHistory('add',`구매처 추가: ${v}`,''); }
+}
+// 배정 칸에 새 이름을 치면 구성원으로 등록한다. 그래야 퇴사 처리 시
+// 자동 반납과 구성원별 보유 현황이 계속 동작한다.
+function ensureEmployee(name) {
+  if(!name) return '';
+  const hit=db.employees.find(e=>e.name===name);
+  if(hit) return hit.id;
+  const e={id:uid(),name,joinDate:'',leaveDate:null,note:''};
+  db.employees.push(e);
+  addHistory('add',`구성원 자동 등록: ${name}`,'배정 입력에서 새 이름이 들어와 생성됨');
+  return e.id;
+}
+function empNameOf(id){ return id?(empById(id)?.name||''):''; }
 function gradeLabel(g) {
   if (!g) return '미지정';
   const n = gradeStars(g);
@@ -713,14 +790,21 @@ function gradeLabel(g) {
 // 이력·칩·확인창에서 항목을 식별할 때 쓰는 짧은 이름
 function subLabel(s) { return s.productName || s.deviceName || s.deviceType || '항목'; }
 
-let db = { employees:[], subscriptions:[], vendors:[] };
+let db = { employees:[], subscriptions:[], vendors:[], settings:null };
 let historyLog = [];
 
 function loadDB() {
   const raw = localStorage.getItem(STORAGE_KEY);
-  if (raw) { db = JSON.parse(raw); }
+  if (raw) {
+    db = JSON.parse(raw);
+    // 예전에 저장된 데이터에는 settings가 없다. 없으면 기본값을 채워 넣는다.
+    if (!db.settings) db.settings = { deviceTypes:[...DEFAULT_DEVICE_TYPES], grades:DEFAULT_GRADES.map(g=>({...g})) };
+    if (!db.settings.deviceTypes) db.settings.deviceTypes=[...DEFAULT_DEVICE_TYPES];
+    if (!db.settings.grades) db.settings.grades=DEFAULT_GRADES.map(g=>({...g}));
+  }
   else {
     db = {
+      settings: { deviceTypes:[...DEFAULT_DEVICE_TYPES], grades:DEFAULT_GRADES.map(g=>({...g})) },
       vendors: [
         {id:'v1',name:'고위드',url:'https://www.gowid.com/newpages/spend-optimization/devices',memo:'노트북 구독 서비스'},
         {id:'v2',name:'페이시',url:'https://www.pacey.co.kr/mypage/index.php',memo:'노트북 렌탈 서비스'}
@@ -991,11 +1075,28 @@ function renderEmployees(){
     }else{
       st=`<span class="badge badge-active">재직 중</span>`;
     }
-    const acts=empCurrentTab==='active'?`<div class="actions-cell"><button class="btn btn-ghost btn-sm" onclick="openOffboard('${e.id}')">퇴사 처리</button></div>`:'';
+    const acts=`<div class="actions-cell">${empCurrentTab==='active'?`<button class="btn btn-ghost btn-sm" onclick="openOffboard('${e.id}')">퇴사 처리</button>`:''}<button class="btn btn-danger btn-sm" onclick="deleteEmployee('${e.id}')">삭제</button></div>`;
     const join=e.joinDate?`<input type="date" class="inline-edit" value="${e.joinDate}" onchange="inlineEmp('${e.id}','joinDate',this.value)">`
                          :`<input type="date" class="inline-edit inline-empty" onchange="inlineEmp('${e.id}','joinDate',this.value)">`;
     return `<tr><td><strong>${e.name}</strong>${e.note?`<div style="font-size:11px;color:var(--text-muted)">${e.note}</div>`:''}</td><td>${join}</td><td style="max-width:220px">${chips}</td><td>${st}</td><td>${acts}</td></tr>`;
   }).join('');
+}
+// 퇴사 처리와 다르다. 잘못 등록한 사람을 아예 지울 때 쓴다.
+// 배정된 장비가 있으면 재고로 돌려놓고 지운다.
+function deleteEmployee(id){
+  const e=empById(id); if(!e) return;
+  const held=subsOf(id);
+  showConfirm('🗑️','구성원 삭제',
+    held.length?`"${e.name}"에게 배정된 ${held.length}건이 재고로 반환되고 구성원이 삭제됩니다. 진행할까요?`
+               :`"${e.name}"을(를) 삭제할까요?`,
+    ()=>{
+      held.forEach(s=>{s.assignedTo='';});
+      db.employees=db.employees.filter(x=>x.id!==id);
+      saveDB();
+      addHistory('del',`구성원 삭제: ${e.name}`,held.length?`재고 반환: ${held.map(subLabel).join(', ')}`:'배정 없음');
+      renderEmployees();
+      if(currentPage==='dashboard') renderDashboard();
+    });
 }
 function openEmpModal(){
   document.getElementById('emp-name').value='';
@@ -1084,7 +1185,7 @@ function renderSubscriptions(){
   vsel.innerHTML='<option value="">전체 구매처</option>'+vendors.map(v=>`<option ${v===curV?'selected':''}>${v}</option>`).join('');
   tsel.innerHTML='<option value="">전체 유형</option>'+types.map(t=>`<option ${t===curT?'selected':''}>${t}</option>`).join('');
   gsel.innerHTML='<option value="">전체 등급</option><option value="__none__"'+(curG==='__none__'?' selected':'')+'>미지정</option>'
-    +GRADES.map(g=>`<option value="${g.key}" ${g.key===curG?'selected':''}>${gradeLabel(g.key)}</option>`).join('');
+    +grades().map(g=>`<option value="${g.key}" ${g.key===curG?'selected':''}>${gradeLabel(g.key)}</option>`).join('');
   let list=db.subscriptions;
   if(subCurrentTab==='subscription') list=list.filter(s=>s.category==='subscription');
   if(subCurrentTab==='asset') list=list.filter(s=>s.category==='asset');
@@ -1138,18 +1239,22 @@ function editCell(td,id,field){
   if(td.querySelector('.inline-edit')) return; // 이미 편집 중
   const s=db.subscriptions.find(x=>x.id===id);
   if(!s) return;
-  const cur=s.assignedTo||'';
-  const opt=(v,label)=>`<option value="${v}" ${v===cur?'selected':''}>${label}</option>`;
-  const el=document.createElement('select');
+  // 목록에서 고르는 게 아니라 이름을 직접 친다. 없는 이름이면 구성원으로 등록된다.
+  const el=document.createElement('input');
   el.className='inline-edit';
-  el.innerHTML=opt('','재고')+activeEmps().map(e=>opt(e.id,e.name)).join('');
+  el.setAttribute('list','inline-emp-list');
+  el.autocomplete='off';
+  el.placeholder='비우면 재고';
+  el.value=empNameOf(s.assignedTo);
+  let dl=document.getElementById('inline-emp-list');
+  if(!dl){ dl=document.createElement('datalist'); dl.id='inline-emp-list'; document.body.appendChild(dl); }
+  dl.innerHTML=activeEmps().map(e=>`<option value="${e.name}">`).join('');
   td.innerHTML=''; td.appendChild(el);
-  el.focus();
-  if(el.showPicker){ try{ el.showPicker(); }catch(e){} }
+  el.focus(); el.select();
   let done=false;
   const finish=commit=>{
     if(done) return; done=true;
-    if(commit) inlineSub(id,field,el.value); else renderSubscriptions();
+    if(commit) inlineSub(id,field,ensureEmployee(el.value.trim())); else renderSubscriptions();
   };
   el.addEventListener('change',()=>finish(true));
   el.addEventListener('blur',()=>finish(true));
@@ -1213,10 +1318,11 @@ function setEndPreset(years){
 }
 function refreshEndPreset(){ if(endPresetYears) setEndPreset(endPresetYears); }
 function populateSubSelects(deviceType,grade){
-  document.getElementById('sub-devicetype').innerHTML=
-    '<option value="">선택</option>'+DEVICE_TYPES.map(t=>`<option ${t===deviceType?'selected':''}>${t}</option>`).join('');
-  document.getElementById('sub-grade').innerHTML=
-    '<option value="">미지정</option>'+GRADES.map(g=>`<option value="${g.key}" ${g.key===grade?'selected':''}>${gradeLabel(g.key)}</option>`).join('');
+  document.getElementById('sub-devicetype').value=deviceType||'';
+  document.getElementById('sub-grade').value=grade||'';
+  document.getElementById('devicetype-list').innerHTML=deviceTypes().map(t=>`<option value="${t}">`).join('');
+  document.getElementById('grade-list').innerHTML=grades().map(g=>`<option value="${g.key}">${g.stars?'★'.repeat(g.stars):''}</option>`).join('');
+  document.getElementById('employee-list').innerHTML=activeEmps().map(e=>`<option value="${e.name}">`).join('');
 }
 
 function openAddSub(){
@@ -1272,21 +1378,24 @@ function editSub(id){
   openModal('modal-add-sub');
 }
 function populateSubAssigned(sel){
-  const el=document.getElementById('sub-assigned');
-  el.innerHTML='<option value="">미배정 (재고)</option>'+activeEmps().map(e=>`<option value="${e.id}" ${e.id===sel?'selected':''}>${e.name}</option>`).join('');
+  document.getElementById('sub-assigned').value=empNameOf(sel);
 }
 function populateVendorDatalist(){
   document.getElementById('vendor-list').innerHTML=db.vendors.map(v=>`<option value="${v.name}">`).join('');
 }
 function saveSubscription(){
   const vendor=document.getElementById('sub-vendor').value.trim();
-  const deviceType=document.getElementById('sub-devicetype').value;
+  const deviceType=document.getElementById('sub-devicetype').value.trim();
+  const grade=document.getElementById('sub-grade').value.trim();
+  const assignedName=document.getElementById('sub-assigned').value.trim();
   const category=document.getElementById('sub-category').value;
   if(!vendor||!deviceType){alert('구매처와 장비 유형은 필수입니다.');return;}
+  // 입력칸에 새로 친 값은 그대로 목록에 등록해서 다음부터 자동완성에 뜨게 한다.
+  ensureVendor(vendor); ensureDeviceType(deviceType); ensureGrade(grade);
+  const assignedTo=ensureEmployee(assignedName);
   const isSub=category==='subscription';
   const editId=document.getElementById('edit-sub-id').value;
-  const data={vendor,deviceType,grade:document.getElementById('sub-grade').value,category,assignedTo:document.getElementById('sub-assigned').value,orderDate:document.getElementById('sub-order').value,endDate:document.getElementById('sub-end').value,monthlyPrice:isSub?(Number(document.getElementById('sub-monthly').value)||0):0,purchasePrice:isSub?0:(Number(document.getElementById('sub-price').value)||0),notes:document.getElementById('sub-notes').value.trim(),deviceName:document.getElementById('sub-devicename').value.trim(),manufacturer:document.getElementById('sub-manufacturer').value.trim(),productName:document.getElementById('sub-productname').value.trim(),serialNo:document.getElementById('sub-serial').value.trim(),modelNo:document.getElementById('sub-model').value.trim(),specs:document.getElementById('sub-specs').value.trim()};
-  if(!db.vendors.find(v=>v.name===vendor)) db.vendors.push({id:uid(),name:vendor,url:'',memo:''});
+  const data={vendor,deviceType,grade,category,assignedTo,orderDate:document.getElementById('sub-order').value,endDate:document.getElementById('sub-end').value,monthlyPrice:isSub?(Number(document.getElementById('sub-monthly').value)||0):0,purchasePrice:isSub?0:(Number(document.getElementById('sub-price').value)||0),notes:document.getElementById('sub-notes').value.trim(),deviceName:document.getElementById('sub-devicename').value.trim(),manufacturer:document.getElementById('sub-manufacturer').value.trim(),productName:document.getElementById('sub-productname').value.trim(),serialNo:document.getElementById('sub-serial').value.trim(),modelNo:document.getElementById('sub-model').value.trim(),specs:document.getElementById('sub-specs').value.trim()};
   if(editId){
     const idx=db.subscriptions.findIndex(s=>s.id===editId);
     const old=db.subscriptions[idx];
@@ -1379,7 +1488,81 @@ function renderVendors(){
   const totalQty=rows.reduce((a,r)=>a+r.total,0), totalMonthly=rows.reduce((a,r)=>a+r.monthly,0);
   document.getElementById('vendor-pool-foot').innerHTML=rows.length
     ?`<tr style="background:var(--bg);font-weight:700"><td colspan="2">합계</td><td>${totalQty}</td><td colspan="3"></td><td class="amt">${fmtPrice(totalMonthly)}</td><td></td></tr>`:'';
+  renderManageLists();
 }
+// ── 목록 관리 (구매처 / 장비 유형 / 등급) ──────────────
+// 삭제할 때 그 값을 쓰고 있는 항목 수를 세어 먼저 알려준다.
+function renderManageLists(){
+  const useV={}, useT={}, useG={};
+  db.subscriptions.forEach(s=>{
+    useV[s.vendor]=(useV[s.vendor]||0)+1;
+    if(s.deviceType) useT[s.deviceType]=(useT[s.deviceType]||0)+1;
+    if(s.grade) useG[s.grade]=(useG[s.grade]||0)+1;
+  });
+  const chip=(label,extra,count,onDel)=>
+    `<span class="mng-chip">${label}${extra}${count?`<span class="cnt">${count}</span>`:''}<button title="삭제" onclick="${onDel}">×</button></span>`;
+  document.getElementById('mng-vendors').innerHTML=
+    db.vendors.map(v=>chip(v.name,'',useV[v.name]||0,`delVendorItem('${v.id}')`)).join('')
+    ||'<span style="font-size:11px;color:var(--text-muted)">없음</span>';
+  document.getElementById('mng-types').innerHTML=
+    deviceTypes().map(t=>chip(t,'',useT[t]||0,`delTypeItem('${t.replace(/'/g,"\\'")}')`)).join('')
+    ||'<span style="font-size:11px;color:var(--text-muted)">없음</span>';
+  document.getElementById('mng-grades').innerHTML=
+    grades().map(g=>chip(g.key,g.stars?` <span class="st">${'★'.repeat(g.stars)}</span>`:'',useG[g.key]||0,`delGradeItem('${g.key.replace(/'/g,"\\'")}')`)).join('')
+    ||'<span style="font-size:11px;color:var(--text-muted)">없음</span>';
+}
+function addVendorItem(){
+  const el=document.getElementById('mng-vendor-input'), name=el.value.trim();
+  if(!name) return;
+  if(db.vendors.find(v=>v.name===name)){alert('이미 있는 구매처입니다.');return;}
+  db.vendors.push({id:uid(),name,url:'',memo:''});
+  saveDB(); addHistory('add',`구매처 추가: ${name}`,''); el.value=''; renderVendors();
+}
+function delVendorItem(id){
+  const v=db.vendors.find(x=>x.id===id); if(!v) return;
+  const n=db.subscriptions.filter(s=>s.vendor===v.name).length;
+  showConfirm('🗑️','구매처 삭제',
+    n?`"${v.name}"을(를) 쓰는 항목이 ${n}건 있습니다. 목록에서만 지우고 기존 항목의 구매처 값은 그대로 남습니다. 진행할까요?`
+     :`"${v.name}"을(를) 삭제할까요?`,
+    ()=>{ db.vendors=db.vendors.filter(x=>x.id!==id); saveDB(); addHistory('del',`구매처 삭제: ${v.name}`,n?`사용 중 ${n}건`:''); renderVendors(); });
+}
+function addTypeItem(){
+  const el=document.getElementById('mng-type-input'), t=el.value.trim();
+  if(!t) return;
+  if(db.settings.deviceTypes.includes(t)){alert('이미 있는 유형입니다.');return;}
+  db.settings.deviceTypes.push(t);
+  saveDB(); addHistory('add',`장비 유형 추가: ${t}`,''); el.value=''; renderVendors();
+}
+function delTypeItem(t){
+  const n=db.subscriptions.filter(s=>s.deviceType===t).length;
+  showConfirm('🗑️','장비 유형 삭제',
+    n?`"${t}"을(를) 쓰는 항목이 ${n}건 있습니다. 목록에서만 지우고 기존 항목의 값은 그대로 남습니다. 진행할까요?`
+     :`"${t}"을(를) 삭제할까요?`,
+    ()=>{ db.settings.deviceTypes=db.settings.deviceTypes.filter(x=>x!==t); saveDB(); addHistory('del',`장비 유형 삭제: ${t}`,n?`사용 중 ${n}건`:''); renderVendors(); });
+}
+function addGradeItem(){
+  const el=document.getElementById('mng-grade-input'), k=el.value.trim();
+  const stars=Math.max(0,Math.min(5,Number(document.getElementById('mng-grade-stars').value)||0));
+  if(!k) return;
+  const hit=db.settings.grades.find(g=>g.key===k);
+  if(hit){ // 이미 있으면 별점만 갱신
+    if(hit.stars===stars){alert('이미 있는 등급입니다.');return;}
+    const prev=hit.stars; hit.stars=stars;
+    saveDB(); addHistory('edit',`등급 별점 변경: ${k}`,`★${prev} → ★${stars}`);
+  } else {
+    db.settings.grades.push({key:k,stars});
+    saveDB(); addHistory('add',`등급 추가: ${k}`,`별점 ${stars}`);
+  }
+  el.value=''; document.getElementById('mng-grade-stars').value=0; renderVendors();
+}
+function delGradeItem(k){
+  const n=db.subscriptions.filter(s=>s.grade===k).length;
+  showConfirm('🗑️','등급 삭제',
+    n?`"${k}" 등급인 항목이 ${n}건 있습니다. 목록에서만 지우고 기존 항목의 값은 그대로 남습니다. 진행할까요?`
+     :`"${k}"을(를) 삭제할까요?`,
+    ()=>{ db.settings.grades=db.settings.grades.filter(g=>g.key!==k); saveDB(); addHistory('del',`등급 삭제: ${k}`,n?`사용 중 ${n}건`:''); renderVendors(); });
+}
+
 function saveVendor(){
   const name=document.getElementById('vendor-name').value.trim();
   if(!name){alert('구매처 이름은 필수입니다.');return;}
