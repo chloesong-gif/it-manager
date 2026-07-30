@@ -100,6 +100,26 @@ tbody td{padding:10px 11px;border-bottom:1px solid var(--border);vertical-align:
 tbody tr:last-child td{border-bottom:none}
 tbody tr:hover{background:#fafafa}
 
+.hint-inline{font-size:11px;color:var(--text-muted);background:var(--bg);border-radius:7px;padding:7px 11px;margin-bottom:10px}
+
+/* ── 종료일 프리셋 ── */
+.preset-row{display:flex;gap:5px;margin-bottom:6px}
+.preset-btn{flex:1;padding:5px 0;border:1px solid var(--border);background:var(--surface);border-radius:6px;font-size:11px;font-weight:600;color:var(--text-muted);cursor:pointer;transition:all .12s}
+.preset-btn:hover{border-color:var(--primary);color:var(--primary)}
+.preset-btn.active{background:var(--primary-light);border-color:var(--primary);color:var(--primary)}
+
+/* ── 표에서 바로 수정 ── */
+/* 평소엔 일반 텍스트처럼, 마우스를 올리거나 편집 중일 때만 입력칸으로 보이게 한다 */
+.inline-edit{border:1px solid transparent;background:transparent;border-radius:6px;padding:4px 6px;font-size:13px;font-family:inherit;color:var(--text);width:100%;min-width:74px;cursor:pointer;transition:all .12s}
+.inline-edit:hover{border-color:var(--border);background:var(--surface)}
+.inline-edit:focus{outline:none;border-color:var(--primary);background:var(--surface);box-shadow:0 0 0 3px rgba(79,70,229,.1);cursor:text}
+.inline-edit.inline-empty{color:var(--text-muted)}
+.inline-edit.num{text-align:right}
+td.editable{position:relative}
+td.editable::after{content:'✎';position:absolute;top:50%;right:4px;transform:translateY(-50%);font-size:9px;color:var(--border);pointer-events:none;opacity:0;transition:opacity .12s}
+tr:hover td.editable::after{opacity:1}
+.grade-stars{color:#f59e0b;letter-spacing:-1px}
+
 /* ── Badges ── */
 .badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:700}
 .badge-active{background:var(--success-light);color:#065f46}
@@ -303,13 +323,13 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
     <div id="alert-list" class="alert-list"></div>
     <div class="stats-grid">
       <div class="stat-card accent"><div class="sl">총 구독·자산</div><div class="sv" id="stat-total">—</div><div class="sd">전체 항목</div></div>
-      <div class="stat-card green"><div class="sl">활성 구성원</div><div class="sv" id="stat-members">—</div><div class="sd">현재 재직 중</div></div>
+      <div class="stat-card green"><div class="sl">활성 구성원</div><div class="sv" id="stat-members">—</div><div class="sd" id="stat-members-sub">현재 재직 중</div></div>
       <div class="stat-card yellow"><div class="sl">라이선스 재고</div><div class="sv" id="stat-pool">—</div><div class="sd">미배정 구독</div></div>
       <div class="stat-card red"><div class="sl">월 구독 비용</div><div class="sv" id="stat-cost">—</div><div class="sd">₩ / 월</div></div>
     </div>
     <div class="grid-2">
       <div class="card"><div class="card-header"><div class="card-title">구매처별 구독 현황</div></div><div class="chart-wrap"><canvas id="chart-vendor"></canvas></div></div>
-      <div class="card"><div class="card-header"><div class="card-title">구독 유형별 분포</div></div><div class="chart-wrap"><canvas id="chart-type"></canvas></div></div>
+      <div class="card"><div class="card-header"><div class="card-title">등급별 분포</div></div><div class="chart-wrap"><canvas id="chart-type"></canvas></div></div>
     </div>
     <div class="card">
       <div class="card-header"><div class="card-title">🔔 만료 임박 구독 (90일 이내)</div></div>
@@ -324,14 +344,14 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
       <button class="btn btn-primary" onclick="openEmpModal()">＋ 입사자 등록</button>
     </div>
     <div class="inner-tabs">
-      <button class="inner-tab active" onclick="empTab('active',this)">재직 중 <span id="emp-active-cnt"></span></button>
+      <button class="inner-tab active" onclick="empTab('active',this)">재직·입사예정 <span id="emp-active-cnt"></span></button>
       <button class="inner-tab" onclick="empTab('left',this)">퇴직자 <span id="emp-left-cnt"></span></button>
     </div>
     <div class="card" style="padding:0">
       <div class="toolbar" style="padding:14px 14px 0">
         <div class="search-wrap"><input type="text" id="emp-search" placeholder="이름 검색…" oninput="renderEmployees()"></div>
       </div>
-      <div class="table-wrap"><table><thead><tr><th>이름</th><th>역할</th><th>입사일</th><th>배정 구독·자산</th><th id="emp-col4-head">상태</th><th></th></tr></thead><tbody id="emp-table"></tbody></table></div>
+      <div class="table-wrap"><table><thead><tr><th>이름</th><th>입사일</th><th>배정 구독·자산</th><th id="emp-col4-head">상태</th><th></th></tr></thead><tbody id="emp-table"></tbody></table></div>
     </div>
   </div>
 
@@ -352,8 +372,10 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
         <div class="search-wrap"><input type="text" id="sub-search" placeholder="구매처·유형 검색…" oninput="renderSubscriptions()"></div>
         <select class="filter-sel" id="sub-vendor-filter" onchange="renderSubscriptions()"><option value="">전체 구매처</option></select>
         <select class="filter-sel" id="sub-type-filter" onchange="renderSubscriptions()"><option value="">전체 유형</option></select>
+        <select class="filter-sel" id="sub-grade-filter" onchange="renderSubscriptions()"><option value="">전체 등급</option></select>
       </div>
-      <div class="table-wrap"><table><thead><tr><th>구매처</th><th>유형</th><th>카테고리</th><th>배정 구성원</th><th>제품명</th><th>시리얼</th><th>주문일</th><th>종료일</th><th>월 비용</th><th>구매가</th><th></th></tr></thead><tbody id="sub-table"></tbody></table></div>
+      <div class="hint-inline">💡 유형·등급·배정·종료일·금액은 표에서 바로 고칠 수 있습니다. 수정하면 이력에 기록됩니다.</div>
+      <div class="table-wrap"><table><thead><tr><th>구매처</th><th>유형</th><th>등급</th><th>구분</th><th>배정 구성원</th><th>제품명</th><th>시리얼</th><th>주문일</th><th>종료일</th><th>금액</th><th></th></tr></thead><tbody id="sub-table"></tbody></table></div>
     </div>
   </div>
 
@@ -406,13 +428,8 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
     <div class="modal-header"><div class="modal-title">👤 입사자 등록</div><button class="modal-close" onclick="closeModal('modal-add-emp')">×</button></div>
     <div class="form-row">
       <div class="form-group"><label class="form-label">이름 *</label><input class="form-control" id="emp-name" placeholder="홍길동"></div>
-      <div class="form-group"><label class="form-label">역할 *</label>
-        <select class="form-control" id="emp-role" onchange="updateAssignSuggest()">
-          <option value="">선택</option><option>일반용</option><option>프론트용</option><option>백앤드용</option><option>디자이너용</option><option>기타</option>
-        </select>
-      </div>
+      <div class="form-group"><label class="form-label">입사일 *</label><input class="form-control" id="emp-join" type="date" onchange="updateAssignSuggest()"></div>
     </div>
-    <div class="form-group"><label class="form-label">입사일 *</label><input class="form-control" id="emp-join" type="date"></div>
     <div class="form-group"><label class="form-label">메모</label><input class="form-control" id="emp-note" placeholder="선택 사항"></div>
     <div id="assign-suggest" style="display:none">
       <hr class="section-divider">
@@ -442,19 +459,28 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
     <input type="hidden" id="edit-sub-id">
     <div class="form-row">
       <div class="form-group"><label class="form-label">구매처 *</label><input class="form-control" id="sub-vendor" list="vendor-list" placeholder="고위드"><datalist id="vendor-list"></datalist></div>
-      <div class="form-group"><label class="form-label">카테고리 *</label><select class="form-control" id="sub-category"><option value="subscription">구독</option><option value="asset">자산 (기기·장비)</option></select></div>
+      <div class="form-group"><label class="form-label">구분 *</label><select class="form-control" id="sub-category" onchange="onCategoryChange()"><option value="subscription">구독</option><option value="asset">구매</option></select></div>
     </div>
     <div class="form-row">
-      <div class="form-group"><label class="form-label">유형 *</label><input class="form-control" id="sub-type" list="type-list" placeholder="백앤드용"><datalist id="type-list"><option>백앤드용</option><option>프론트용</option><option>프로덕트 디자이너용</option><option>일반용</option><option>맥북 Pro</option><option>모니터</option><option>키보드</option></datalist></div>
-      <div class="form-group"><label class="form-label">배정 구성원</label><select class="form-control" id="sub-assigned"><option value="">미배정 (재고)</option></select></div>
+      <div class="form-group"><label class="form-label">장비 유형 *</label><select class="form-control" id="sub-devicetype"></select></div>
+      <div class="form-group"><label class="form-label">등급</label><select class="form-control" id="sub-grade"></select></div>
+    </div>
+    <div class="form-group"><label class="form-label">배정 구성원</label><select class="form-control" id="sub-assigned"><option value="">미배정 (재고)</option></select></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">주문일</label><input class="form-control" id="sub-order" type="date" onchange="refreshEndPreset()"></div>
+      <div class="form-group"><label class="form-label">종료일</label>
+        <div class="preset-row">
+          <button type="button" class="preset-btn" id="preset-1" onclick="setEndPreset(1)">1년 뒤</button>
+          <button type="button" class="preset-btn" id="preset-2" onclick="setEndPreset(2)">2년 뒤</button>
+          <button type="button" class="preset-btn" id="preset-0" onclick="setEndPreset(0)">직접입력</button>
+        </div>
+        <input class="form-control" id="sub-end" type="date">
+        <div class="form-hint">무기한이면 비워두세요</div>
+      </div>
     </div>
     <div class="form-row">
-      <div class="form-group"><label class="form-label">주문일</label><input class="form-control" id="sub-order" type="date"></div>
-      <div class="form-group"><label class="form-label">종료일</label><input class="form-control" id="sub-end" type="date"><div class="form-hint">무기한이면 비워두세요</div></div>
-    </div>
-    <div class="form-row">
-      <div class="form-group"><label class="form-label">월 비용 (₩)</label><input class="form-control" id="sub-monthly" type="number" placeholder="0"></div>
-      <div class="form-group"><label class="form-label">구매가 (₩)</label><input class="form-control" id="sub-price" type="number" placeholder="0"></div>
+      <div class="form-group" id="grp-monthly"><label class="form-label">월 구독료 (₩)</label><input class="form-control" id="sub-monthly" type="number" placeholder="0"></div>
+      <div class="form-group" id="grp-price"><label class="form-label">구매가 (₩)</label><input class="form-control" id="sub-price" type="number" placeholder="0"></div>
     </div>
     <div class="form-group"><label class="form-label">메모</label><input class="form-control" id="sub-notes" placeholder="선택 사항"></div>
     <hr class="section-divider">
@@ -622,8 +648,26 @@ function hide(id) { const el = document.getElementById(id); if(el){ el.style.dis
 // ═══════════════════════════════════════════════════════
 // DATA
 // ═══════════════════════════════════════════════════════
-const STORAGE_KEY = 'itm_v3';
+const STORAGE_KEY = 'itm_v4';
 const HISTORY_KEY = 'itm_history';
+
+// 장비 유형(품목)과 등급(사양 티어)은 서로 다른 축이다.
+// 등급은 사람이 아니라 장비에 붙는다 — 재배정·매각 시 사양을 알아야 하기 때문.
+const DEVICE_TYPES = ['노트북','모니터','이어폰','마우스','키보드','기타'];
+const GRADES = [
+  { key:'일반용',   stars:0 },
+  { key:'프디용',   stars:2 },
+  { key:'프론트용', stars:3 },
+  { key:'백엔드용', stars:4 }
+];
+function gradeStars(g) { const f=GRADES.find(x=>x.key===g); return f?f.stars:0; }
+function gradeLabel(g) {
+  if (!g) return '미지정';
+  const n = gradeStars(g);
+  return n ? `${g} ${'★'.repeat(n)}` : g;
+}
+// 이력·칩·확인창에서 항목을 식별할 때 쓰는 짧은 이름
+function subLabel(s) { return s.productName || s.deviceName || s.deviceType || '항목'; }
 
 let db = { employees:[], subscriptions:[], vendors:[] };
 let historyLog = [];
@@ -638,62 +682,62 @@ function loadDB() {
         {id:'v2',name:'페이시',url:'https://payhere.in',memo:'노트북 렌탈 서비스'}
       ],
       employees: [
-        {id:'e1',name:'맥스',role:'일반용',joinDate:'2026-07-28',leaveDate:null,note:''},
-        {id:'e2',name:'준',role:'프론트용',joinDate:'2026-07-28',leaveDate:null,note:''},
-        {id:'e3',name:'루시',role:'프론트용',joinDate:'2026-07-30',leaveDate:null,note:''}
+        {id:'e1',name:'맥스',joinDate:'',leaveDate:null,note:''},
+        {id:'e2',name:'준',joinDate:'',leaveDate:null,note:''},
+        {id:'e3',name:'루시',joinDate:'',leaveDate:null,note:''}
       ],
       subscriptions: [
-        {id:'s1',vendor:'고위드',type:'일반용',category:'subscription',assignedTo:'e1',
+        {id:'s1',vendor:'고위드',deviceType:'노트북',grade:'일반용',category:'subscription',assignedTo:'e1',
          orderDate:'2026-07-28',endDate:'',monthlyPrice:68500,purchasePrice:0,
          deviceName:'LG 그램 16',manufacturer:'LG',productName:'그램 16',
          serialNo:'605NZET074228',modelNo:'16Z90TL-GS5WK',
          specs:'화이트, Ultra5 226V, 16GB, 512GB, 16인치',notes:''},
-        {id:'s2',vendor:'고위드',type:'프론트용',category:'subscription',assignedTo:'e2',
+        {id:'s2',vendor:'고위드',deviceType:'노트북',grade:'프론트용',category:'subscription',assignedTo:'e2',
          orderDate:'2026-07-28',endDate:'',monthlyPrice:137000,purchasePrice:0,
          deviceName:'맥북 프로 14',manufacturer:'Apple',productName:'맥북 프로 14',
          serialNo:'H4MWXX29YJ',modelNo:'MGDR4KH/A',
          specs:'스페이스 블랙, M5 Pro 15코어, 16코어, 24GB, 1TB, 14인치',notes:''},
-        {id:'s3',vendor:'고위드',type:'프론트용',category:'subscription',assignedTo:'e3',
+        {id:'s3',vendor:'고위드',deviceType:'노트북',grade:'프론트용',category:'subscription',assignedTo:'e3',
          orderDate:'2026-07-30',endDate:'',monthlyPrice:137000,purchasePrice:0,
          deviceName:'맥북 프로 14',manufacturer:'Apple',productName:'맥북 프로 14',
          serialNo:'HVVH3H730Y',modelNo:'MGDR4KH/A',
          specs:'스페이스 블랙, M5 Pro 15코어, 16코어, 24GB, 1TB, 14인치',notes:''},
-        {id:'s4',vendor:'페이시',type:'맥북프로 M3 PRO',category:'subscription',assignedTo:'',
+        {id:'s4',vendor:'페이시',deviceType:'노트북',grade:'',category:'subscription',assignedTo:'',
          orderDate:'2024-12-12',endDate:'2026-12-11',monthlyPrice:141620,purchasePrice:0,
          deviceName:'맥북프로 14 M3 PRO',manufacturer:'Apple',productName:'맥북프로 14 M3 PRO',
          serialNo:'CK62G6QKG1',modelNo:'',
          specs:'M3 PRO 12C/18G (18G/1T) 중급형',notes:''},
-        {id:'s5',vendor:'페이시',type:'맥북에어 M3',category:'subscription',assignedTo:'',
+        {id:'s5',vendor:'페이시',deviceType:'노트북',grade:'',category:'subscription',assignedTo:'',
          orderDate:'2024-12-12',endDate:'2026-12-11',monthlyPrice:56260,purchasePrice:0,
          deviceName:'맥북에어 13 M3',manufacturer:'Apple',productName:'맥북에어 13 M3',
          serialNo:'K00H2DLX2C',modelNo:'',
          specs:'M3 8C/8G (16G/256G) 기본형',notes:''},
-        {id:'s6',vendor:'페이시',type:'맥북에어 M3',category:'subscription',assignedTo:'',
+        {id:'s6',vendor:'페이시',deviceType:'노트북',grade:'',category:'subscription',assignedTo:'',
          orderDate:'2024-12-12',endDate:'2026-12-11',monthlyPrice:56260,purchasePrice:0,
          deviceName:'맥북에어 13 M3',manufacturer:'Apple',productName:'맥북에어 13 M3',
          serialNo:'J494MXHC9R',modelNo:'',
          specs:'M3 8C/8G (16G/256G) 기본형',notes:''},
-        {id:'s7',vendor:'페이시',type:'맥북프로 M4 MAX',category:'subscription',assignedTo:'',
+        {id:'s7',vendor:'페이시',deviceType:'노트북',grade:'',category:'subscription',assignedTo:'',
          orderDate:'2025-01-02',endDate:'2027-01-01',monthlyPrice:188180,purchasePrice:0,
          deviceName:'맥북프로 14 M4 MAX',manufacturer:'Apple',productName:'맥북프로 14 M4 MAX',
          serialNo:'J2V6L23JGK',modelNo:'',
          specs:'M4 MAX 14C/32G (36G/1T) 고급형',notes:''},
-        {id:'s8',vendor:'페이시',type:'맥북프로 M4 MAX',category:'subscription',assignedTo:'',
+        {id:'s8',vendor:'페이시',deviceType:'노트북',grade:'',category:'subscription',assignedTo:'',
          orderDate:'2025-01-02',endDate:'2027-01-01',monthlyPrice:188180,purchasePrice:0,
          deviceName:'맥북프로 14 M4 MAX',manufacturer:'Apple',productName:'맥북프로 14 M4 MAX',
          serialNo:'G4XRGXC2CM',modelNo:'',
          specs:'M4 MAX 14C/32G (36G/1T) 고급형',notes:''},
-        {id:'s9',vendor:'페이시',type:'맥북프로 M4 PRO 16',category:'subscription',assignedTo:'',
+        {id:'s9',vendor:'페이시',deviceType:'노트북',grade:'',category:'subscription',assignedTo:'',
          orderDate:'2025-01-02',endDate:'2027-01-01',monthlyPrice:147440,purchasePrice:0,
          deviceName:'맥북프로 16 M4 PRO',manufacturer:'Apple',productName:'맥북프로 16 M4 PRO',
          serialNo:'JCW3JX5R9M',modelNo:'',
          specs:'M4 PRO 14C/20G (48G/512G) 중급형',notes:''},
-        {id:'s10',vendor:'페이시',type:'맥북프로 M4 PRO 14',category:'subscription',assignedTo:'',
+        {id:'s10',vendor:'페이시',deviceType:'노트북',grade:'',category:'subscription',assignedTo:'',
          orderDate:'2025-01-02',endDate:'2027-01-01',monthlyPrice:127070,purchasePrice:0,
          deviceName:'맥북프로 14 M4 PRO',manufacturer:'Apple',productName:'맥북프로 14 M4 PRO',
          serialNo:'M7M0V9RH3Y',modelNo:'',
          specs:'M4 PRO 14C/20G (24G/1T) 중급형',notes:''},
-        {id:'s11',vendor:'페이시',type:'맥북에어 M3',category:'subscription',assignedTo:'',
+        {id:'s11',vendor:'페이시',deviceType:'노트북',grade:'',category:'subscription',assignedTo:'',
          orderDate:'2024-11-21',endDate:'2026-11-20',monthlyPrice:56260,purchasePrice:0,
          deviceName:'맥북에어 13 M3',manufacturer:'Apple',productName:'맥북에어 13 M3',
          serialNo:'KG6HFHWF75',modelNo:'',
@@ -786,13 +830,30 @@ function navigate(page) {
 // ═══════════════════════════════════════════════════════
 function empById(id) { return db.employees.find(e=>e.id===id); }
 function activeEmps() { return db.employees.filter(e=>!e.leaveDate); }
+// 입사일이 미래면 '입사 예정'. 날짜가 지나면 자동으로 '재직 중'이 된다.
+function empStatus(e) {
+  if (e.leaveDate) return 'left';
+  if (e.joinDate && e.joinDate > today()) return 'upcoming';
+  return 'active';
+}
+function joinedEmps() { return db.employees.filter(e=>empStatus(e)==='active'); }
+function upcomingEmps() { return db.employees.filter(e=>empStatus(e)==='upcoming'); }
+function daysUntil(dateStr) {
+  if (!dateStr) return null;
+  return Math.round((new Date(dateStr+'T00:00:00')-new Date(today()+'T00:00:00'))/86400000);
+}
 function subsOf(empId) { return db.subscriptions.filter(s=>s.assignedTo===empId); }
+// toISOString()은 UTC로 바꿔버려서 한국(UTC+9) 기준 새벽에 날짜가 하루 밀린다.
+// 날짜 계산은 전부 이 로컬 기준 포맷터를 거친다.
+function fmtDate(d) {
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
 function daysLeft(endDate) {
   if (!endDate) return null;
-  return Math.ceil((new Date(endDate)-new Date())/86400000);
+  return Math.round((new Date(endDate+'T00:00:00')-new Date(today()+'T00:00:00'))/86400000);
 }
 function fmtPrice(n) { return n ? '₩'+Number(n).toLocaleString() : '—'; }
-function today() { return new Date().toISOString().slice(0,10); }
+function today() { return fmtDate(new Date()); }
 function vendorColors(vendors) {
   const p=['#4f46e5','#059669','#d97706','#dc2626','#7c3aed','#0891b2','#be185d','#0f766e'];
   const m={}; vendors.forEach((v,i)=>{m[v]=p[i%p.length];}); return m;
@@ -804,11 +865,14 @@ function vendorColors(vendors) {
 let chartVendor=null, chartType=null;
 function renderDashboard() {
   document.getElementById('today-date').textContent = new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'short'});
-  const subs=db.subscriptions, emps=activeEmps();
+  const subs=db.subscriptions;
   const unassigned=subs.filter(s=>!s.assignedTo);
   const monthly=subs.filter(s=>s.category==='subscription').reduce((a,s)=>a+(Number(s.monthlyPrice)||0),0);
+  const joined=joinedEmps(), upcoming=upcomingEmps();
   document.getElementById('stat-total').textContent=subs.length;
-  document.getElementById('stat-members').textContent=emps.length;
+  document.getElementById('stat-members').textContent=joined.length;
+  document.getElementById('stat-members-sub').textContent=
+    upcoming.length ? `현재 재직 중 · 입사 예정 ${upcoming.length}명` : '현재 재직 중';
   document.getElementById('stat-pool').textContent=unassigned.length;
   document.getElementById('stat-cost').textContent=fmtPrice(monthly);
 
@@ -829,7 +893,7 @@ function renderDashboard() {
       const dl=daysLeft(s.endDate);
       const cls=dl<=0?'badge-expired':dl<=30?'badge-expiring':'badge-warn';
       const emp=s.assignedTo?empById(s.assignedTo):null;
-      return `<tr><td><span class="badge badge-primary">${s.vendor}</span></td><td>${s.type}</td>
+      return `<tr><td><span class="badge badge-primary">${s.vendor}</span></td><td>${subLabel(s)}</td>
         <td>${emp?`<span class="chip chip-member">${emp.name}</span>`:'<span style="color:var(--text-muted)">미배정</span>'}</td>
         <td>${s.endDate}</td><td><span class="badge ${cls}">${dl<=0?'만료':dl+'일'}</span></td>
         <td><button class="btn btn-ghost btn-sm" onclick="editSub('${s.id}')">수정</button></td></tr>`;
@@ -837,7 +901,7 @@ function renderDashboard() {
 
   // Charts
   const vendorMap={}, typeMap={};
-  subs.forEach(s=>{vendorMap[s.vendor]=(vendorMap[s.vendor]||0)+1; typeMap[s.type]=(typeMap[s.type]||0)+1;});
+  subs.forEach(s=>{vendorMap[s.vendor]=(vendorMap[s.vendor]||0)+1; typeMap[gradeLabel(s.grade)]=(typeMap[gradeLabel(s.grade)]||0)+1;});
   const vc=Object.values(vendorColors(Object.keys(vendorMap)));
   if(chartVendor) chartVendor.destroy();
   chartVendor=new Chart(document.getElementById('chart-vendor'),{type:'doughnut',data:{labels:Object.keys(vendorMap),datasets:[{data:Object.values(vendorMap),backgroundColor:vc,borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:11}}}}}});
@@ -860,50 +924,62 @@ function empTab(tab,el){
 function renderEmployees(){
   const q=(document.getElementById('emp-search')?.value||'').toLowerCase();
   let list=empCurrentTab==='active'?db.employees.filter(e=>!e.leaveDate):db.employees.filter(e=>!!e.leaveDate);
-  if(q) list=list.filter(e=>e.name.toLowerCase().includes(q)||e.role.toLowerCase().includes(q));
+  if(q) list=list.filter(e=>e.name.toLowerCase().includes(q));
   document.getElementById('emp-active-cnt').textContent=`(${db.employees.filter(e=>!e.leaveDate).length})`;
   document.getElementById('emp-left-cnt').textContent=`(${db.employees.filter(e=>!!e.leaveDate).length})`;
   const tbody=document.getElementById('emp-table');
-  if(list.length===0){tbody.innerHTML=`<tr><td colspan="6"><div class="empty"><div class="ei">👤</div><div class="et">구성원 없음</div><div class="ed">입사자를 등록해주세요</div></div></td></tr>`;return;}
+  if(list.length===0){tbody.innerHTML=`<tr><td colspan="5"><div class="empty"><div class="ei">👤</div><div class="et">구성원 없음</div><div class="ed">입사자를 등록해주세요</div></div></td></tr>`;return;}
   tbody.innerHTML=list.map(e=>{
     const subs=subsOf(e.id);
-    const chips=subs.length?subs.map(s=>`<span class="chip chip-member">${s.vendor}·${s.type}</span>`).join(''):`<span style="color:var(--text-muted);font-size:12px">없음</span>`;
-    const st=empCurrentTab==='active'?`<span class="badge badge-active">재직 중</span>`:`<span class="badge badge-left">${e.leaveDate}</span>`;
+    // 어떤 등급의 장비를 쥐고 있는지가 재배정·매각 판단의 핵심이라 칩에 별점을 함께 노출한다.
+    const chips=subs.length?subs.map(s=>{
+      const st=gradeStars(s.grade);
+      return `<span class="chip chip-member">${s.vendor}·${subLabel(s)}${st?` <b>${'★'.repeat(st)}</b>`:''}</span>`;
+    }).join(''):`<span style="color:var(--text-muted);font-size:12px">없음</span>`;
+    let st;
+    if(empCurrentTab!=='active'){
+      st=`<span class="badge badge-left">${e.leaveDate}</span>`;
+    }else if(!e.joinDate){
+      st=`<span class="badge badge-gray">입사일 미입력</span>`;
+    }else if(empStatus(e)==='upcoming'){
+      const d=daysUntil(e.joinDate);
+      st=`<span class="badge badge-expiring">입사 예정 ${d===0?'D-DAY':'D-'+d}</span>`;
+    }else{
+      st=`<span class="badge badge-active">재직 중</span>`;
+    }
     const acts=empCurrentTab==='active'?`<div class="actions-cell"><button class="btn btn-ghost btn-sm" onclick="openOffboard('${e.id}')">퇴사 처리</button></div>`:'';
-    return `<tr><td><strong>${e.name}</strong>${e.note?`<div style="font-size:11px;color:var(--text-muted)">${e.note}</div>`:''}</td><td><span class="badge badge-gray">${e.role}</span></td><td>${e.joinDate}</td><td style="max-width:220px">${chips}</td><td>${st}</td><td>${acts}</td></tr>`;
+    const join=e.joinDate?`<input type="date" class="inline-edit" value="${e.joinDate}" onchange="inlineEmp('${e.id}','joinDate',this.value)">`
+                         :`<input type="date" class="inline-edit inline-empty" onchange="inlineEmp('${e.id}','joinDate',this.value)">`;
+    return `<tr><td><strong>${e.name}</strong>${e.note?`<div style="font-size:11px;color:var(--text-muted)">${e.note}</div>`:''}</td><td>${join}</td><td style="max-width:220px">${chips}</td><td>${st}</td><td>${acts}</td></tr>`;
   }).join('');
 }
 function openEmpModal(){
   document.getElementById('emp-name').value='';
-  document.getElementById('emp-role').value='';
   document.getElementById('emp-join').value=today();
   document.getElementById('emp-note').value='';
   document.getElementById('assign-suggest').style.display='none';
   openModal('modal-add-emp');
 }
 function updateAssignSuggest(){
-  const role=document.getElementById('emp-role').value;
-  if(!role){document.getElementById('assign-suggest').style.display='none';return;}
   const pool=db.subscriptions.filter(s=>!s.assignedTo&&s.category==='subscription');
   if(!pool.length){document.getElementById('assign-suggest').style.display='none';return;}
   document.getElementById('assign-suggest').style.display='block';
   document.getElementById('assign-suggest-list').innerHTML=pool.map(s=>`
     <label style="display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;cursor:pointer">
       <input type="checkbox" name="assign-pool" value="${s.id}">
-      <div><div style="font-weight:600;font-size:13px">${s.vendor} · ${s.type}</div><div style="font-size:11px;color:var(--text-muted)">${s.orderDate||''}</div></div>
+      <div><div style="font-weight:600;font-size:13px">${s.vendor} · ${subLabel(s)}</div><div style="font-size:11px;color:var(--text-muted)">${s.orderDate||''}</div></div>
     </label>`).join('');
 }
 function saveEmployee(){
   const name=document.getElementById('emp-name').value.trim();
-  const role=document.getElementById('emp-role').value;
   const joinDate=document.getElementById('emp-join').value;
-  if(!name||!role||!joinDate){alert('이름, 역할, 입사일은 필수입니다.');return;}
-  const emp={id:uid(),name,role,joinDate,leaveDate:null,note:document.getElementById('emp-note').value.trim()};
+  if(!name||!joinDate){alert('이름과 입사일은 필수입니다.');return;}
+  const emp={id:uid(),name,joinDate,leaveDate:null,note:document.getElementById('emp-note').value.trim()};
   db.employees.push(emp);
   const assigned=[];
   document.querySelectorAll('input[name="assign-pool"]:checked').forEach(cb=>{
     const sub=db.subscriptions.find(s=>s.id===cb.value);
-    if(sub){sub.assignedTo=emp.id;assigned.push(sub.vendor+'·'+sub.type);}
+    if(sub){sub.assignedTo=emp.id;assigned.push(sub.vendor+'·'+subLabel(sub));}
   });
   saveDB();
   addHistory('add',`입사자 등록: ${name} (${role})`, assigned.length?`배정됨: ${assigned.join(', ')}`:'배정 없음');
@@ -923,14 +999,14 @@ function openOffboard(empId){
   const list=document.getElementById('offboard-licenses');
   list.innerHTML=subs.length===0
     ?'<div class="lrl-item" style="color:var(--text-muted)">배정된 구독·자산 없음</div>'
-    :subs.map(s=>`<div class="lrl-item"><div><div class="lrl-name">${s.vendor}</div><div class="lrl-type">${s.type} · ${s.category==='subscription'?'구독':'자산'}</div></div><span class="badge badge-warn">반환 예정</span></div>`).join('');
+    :subs.map(s=>`<div class="lrl-item"><div><div class="lrl-name">${s.vendor}</div><div class="lrl-type">${gradeLabel(s.grade)} · ${s.category==='subscription'?'구독':'자산'}</div></div><span class="badge badge-warn">반환 예정</span></div>`).join('');
   openModal('modal-offboard');
 }
 function confirmOffboard(){
   if(!offboardTargetId) return;
   const date=document.getElementById('offboard-date').value||today();
   const emp=empById(offboardTargetId);
-  const returned=subsOf(offboardTargetId).map(s=>s.vendor+'·'+s.type);
+  const returned=subsOf(offboardTargetId).map(s=>s.vendor+'·'+subLabel(s));
   emp.leaveDate=date;
   db.subscriptions.filter(s=>s.assignedTo===offboardTargetId).forEach(s=>{s.assignedTo='';});
   saveDB();
@@ -954,53 +1030,141 @@ function renderSubscriptions(){
   const q=(document.getElementById('sub-search')?.value||'').toLowerCase();
   const vf=document.getElementById('sub-vendor-filter')?.value||'';
   const tf=document.getElementById('sub-type-filter')?.value||'';
+  const gf=document.getElementById('sub-grade-filter')?.value||'';
   const vendors=[...new Set(db.subscriptions.map(s=>s.vendor))].sort();
-  const types=[...new Set(db.subscriptions.map(s=>s.type))].sort();
+  const types=[...new Set(db.subscriptions.map(s=>s.deviceType).filter(Boolean))].sort();
   const vsel=document.getElementById('sub-vendor-filter');
   const tsel=document.getElementById('sub-type-filter');
-  const curV=vsel.value, curT=tsel.value;
+  const gsel=document.getElementById('sub-grade-filter');
+  const curV=vsel.value, curT=tsel.value, curG=gsel.value;
   vsel.innerHTML='<option value="">전체 구매처</option>'+vendors.map(v=>`<option ${v===curV?'selected':''}>${v}</option>`).join('');
   tsel.innerHTML='<option value="">전체 유형</option>'+types.map(t=>`<option ${t===curT?'selected':''}>${t}</option>`).join('');
+  gsel.innerHTML='<option value="">전체 등급</option><option value="__none__"'+(curG==='__none__'?' selected':'')+'>미지정</option>'
+    +GRADES.map(g=>`<option value="${g.key}" ${g.key===curG?'selected':''}>${gradeLabel(g.key)}</option>`).join('');
   let list=db.subscriptions;
   if(subCurrentTab==='subscription') list=list.filter(s=>s.category==='subscription');
   if(subCurrentTab==='asset') list=list.filter(s=>s.category==='asset');
   if(subCurrentTab==='unassigned') list=list.filter(s=>!s.assignedTo);
-  if(q) list=list.filter(s=>s.vendor.toLowerCase().includes(q)||s.type.toLowerCase().includes(q));
+  if(q) list=list.filter(s=>[s.vendor,s.deviceType,s.grade,s.productName,s.serialNo].some(f=>(f||'').toLowerCase().includes(q)));
   if(vf) list=list.filter(s=>s.vendor===vf);
-  if(tf) list=list.filter(s=>s.type===tf);
+  if(tf) list=list.filter(s=>s.deviceType===tf);
+  if(gf) list=list.filter(s=>gf==='__none__'?!s.grade:s.grade===gf);
   const tbody=document.getElementById('sub-table');
   if(!list.length){tbody.innerHTML=`<tr><td colspan="11"><div class="empty"><div class="ei">📋</div><div class="et">항목 없음</div></div></td></tr>`;return;}
+  const empOpts=activeEmps();
   tbody.innerHTML=list.map(s=>{
-    const emp=s.assignedTo?empById(s.assignedTo):null;
     const dl=daysLeft(s.endDate);
-    const endBadge=s.endDate?`${s.endDate} <span class="badge ${dl<=0?'badge-expired':dl<=30?'badge-expiring':dl<=90?'badge-warn':'badge-ok'}">${dl<=0?'만료':dl+'일'}</span>`:'<span style="color:var(--text-muted)">—</span>';
-    const catB=s.category==='subscription'?'<span class="badge badge-sub">구독</span>':'<span class="badge badge-asset">자산</span>';
+    const dueBadge=s.endDate?` <span class="badge ${dl<=0?'badge-expired':dl<=30?'badge-expiring':dl<=90?'badge-warn':'badge-ok'}">${dl<=0?'만료':dl+'일'}</span>`:'';
     const prodName=s.productName||s.deviceName||'—';
     const serial=s.serialNo?`<span style="font-family:monospace;font-size:11px;color:var(--text-muted)">${s.serialNo}</span>`:'<span style="color:var(--text-muted)">—</span>';
+    // 구독이면 월 구독료, 구매면 구매가 — 구분에 따라 해당하는 금액만 편집한다.
+    const isSub=s.category==='subscription';
+    const amtField=isSub?'monthlyPrice':'purchasePrice';
+    const amtVal=isSub?s.monthlyPrice:s.purchasePrice;
+    const sel=(field,opts,cur)=>`<select class="inline-edit${cur?'':' inline-empty'}" onchange="inlineSub('${s.id}','${field}',this.value)">${opts}</select>`;
     return `<tr>
       <td><span class="badge badge-primary">${s.vendor}</span></td>
-      <td>${s.type}</td><td>${catB}</td>
-      <td>${emp?`<span class="chip chip-member">${emp.name}</span>`:'<span style="color:var(--text-muted);font-size:12px">재고</span>'}</td>
+      <td class="editable">${sel('deviceType',
+        `<option value="">미지정</option>`+DEVICE_TYPES.map(t=>`<option ${t===s.deviceType?'selected':''}>${t}</option>`).join(''), s.deviceType)}</td>
+      <td class="editable">${sel('grade',
+        `<option value="">미지정</option>`+GRADES.map(g=>`<option value="${g.key}" ${g.key===s.grade?'selected':''}>${gradeLabel(g.key)}</option>`).join(''), s.grade)}</td>
+      <td class="editable">${sel('category',
+        `<option value="subscription" ${isSub?'selected':''}>구독</option><option value="asset" ${!isSub?'selected':''}>구매</option>`, true)}</td>
+      <td class="editable">${sel('assignedTo',
+        `<option value="">재고</option>`+empOpts.map(e=>`<option value="${e.id}" ${e.id===s.assignedTo?'selected':''}>${e.name}</option>`).join(''), s.assignedTo)}</td>
       <td style="max-width:140px"><div style="font-size:12px;font-weight:600">${prodName}</div>${s.specs?`<div style="font-size:10px;color:var(--text-muted)">${s.specs}</div>`:''}</td>
       <td>${serial}</td>
-      <td>${s.orderDate||'—'}</td><td>${endBadge}</td>
-      <td>${s.monthlyPrice?fmtPrice(s.monthlyPrice):'—'}</td>
-      <td>${s.purchasePrice?fmtPrice(s.purchasePrice):'—'}</td>
+      <td>${s.orderDate||'—'}</td>
+      <td class="editable" style="min-width:150px"><input type="date" class="inline-edit${s.endDate?'':' inline-empty'}" value="${s.endDate||''}" onchange="inlineSub('${s.id}','endDate',this.value)">${dueBadge}</td>
+      <td class="editable" style="min-width:110px"><input type="number" class="inline-edit num${amtVal?'':' inline-empty'}" value="${amtVal||''}" placeholder="0" onchange="inlineSub('${s.id}','${amtField}',this.value)"><div style="font-size:10px;color:var(--text-muted);padding-left:6px">${isSub?'월 구독료':'구매가'}</div></td>
       <td><div class="actions-cell">
-        <button class="btn btn-ghost btn-sm" onclick="openAssign('${s.id}')">배정</button>
-        <button class="btn btn-ghost btn-sm" onclick="editSub('${s.id}')">수정</button>
+        <button class="btn btn-ghost btn-sm" onclick="editSub('${s.id}')">상세</button>
         <button class="btn btn-danger btn-sm" onclick="deleteSub('${s.id}')">삭제</button>
       </div></td></tr>`;
   }).join('');
 }
+// ── 표에서 바로 수정 ──────────────────────────────────
+const FIELD_LABEL={deviceType:'유형',grade:'등급',category:'구분',assignedTo:'배정',endDate:'종료일',monthlyPrice:'월 구독료',purchasePrice:'구매가',joinDate:'입사일'};
+function fieldText(field,v){
+  if(field==='assignedTo') return v?(empById(v)?.name||'?'):'재고';
+  if(field==='category') return v==='subscription'?'구독':'구매';
+  if(field==='grade') return gradeLabel(v);
+  if(field==='monthlyPrice'||field==='purchasePrice') return Number(v)?fmtPrice(v):'—';
+  return v||'—';
+}
+function inlineSub(id,field,value){
+  const s=db.subscriptions.find(x=>x.id===id);
+  if(!s) return;
+  const isNum=field==='monthlyPrice'||field==='purchasePrice';
+  const next=isNum?(Number(value)||0):value;
+  const prev=s[field];
+  if(String(prev??'')===String(next??'')) return;
+  s[field]=next;
+  // 구독↔구매를 바꾸면 반대쪽 금액은 의미가 없어지므로 비운다.
+  if(field==='category'){
+    if(next==='subscription') s.purchasePrice=0; else s.monthlyPrice=0;
+  }
+  saveDB();
+  addHistory('edit',`${s.vendor} · ${subLabel(s)} — ${FIELD_LABEL[field]} 변경`,`${fieldText(field,prev)} → ${fieldText(field,next)}`);
+  renderSubscriptions();
+  if(currentPage==='dashboard') renderDashboard();
+}
+function inlineEmp(id,field,value){
+  const e=db.employees.find(x=>x.id===id);
+  if(!e) return;
+  const prev=e[field];
+  if(String(prev??'')===String(value??'')) return;
+  e[field]=value;
+  saveDB();
+  addHistory('edit',`${e.name} — ${FIELD_LABEL[field]||field} 변경`,`${prev||'—'} → ${value||'—'}`);
+  renderEmployees();
+  if(currentPage==='dashboard') renderDashboard();
+}
+
+// ── 모달 헬퍼 ────────────────────────────────────────
+function onCategoryChange(){
+  const isSub=document.getElementById('sub-category').value==='subscription';
+  document.getElementById('grp-monthly').style.display=isSub?'':'none';
+  document.getElementById('grp-price').style.display=isSub?'none':'';
+}
+// 실제 계약이 '주문일 + N년 - 1일'로 끝나는 형태라 그 규칙을 그대로 따른다.
+// (예: 2024-12-12 주문 → 2026-12-11 종료)
+function addYears(dateStr,years){
+  const d=new Date(dateStr+'T00:00:00');
+  d.setFullYear(d.getFullYear()+years);
+  d.setDate(d.getDate()-1);
+  return fmtDate(d);
+}
+let endPresetYears=0;
+function setEndPreset(years){
+  endPresetYears=years;
+  const end=document.getElementById('sub-end');
+  ['preset-0','preset-1','preset-2'].forEach(id=>document.getElementById(id).classList.remove('active'));
+  document.getElementById('preset-'+years).classList.add('active');
+  if(years===0){ end.readOnly=false; end.focus(); return; }
+  end.readOnly=true;
+  end.value=addYears(document.getElementById('sub-order').value||today(),years);
+}
+function refreshEndPreset(){ if(endPresetYears) setEndPreset(endPresetYears); }
+function populateSubSelects(deviceType,grade){
+  document.getElementById('sub-devicetype').innerHTML=
+    '<option value="">선택</option>'+DEVICE_TYPES.map(t=>`<option ${t===deviceType?'selected':''}>${t}</option>`).join('');
+  document.getElementById('sub-grade').innerHTML=
+    '<option value="">미지정</option>'+GRADES.map(g=>`<option value="${g.key}" ${g.key===grade?'selected':''}>${gradeLabel(g.key)}</option>`).join('');
+}
+
 function openAddSub(){
   document.getElementById('edit-sub-id').value='';
   document.getElementById('modal-sub-title').textContent='📋 구독·자산 추가';
   document.getElementById('sub-vendor').value='';
   document.getElementById('sub-category').value='subscription';
-  document.getElementById('sub-type').value='';
+  populateSubSelects('','');
   document.getElementById('sub-order').value=today();
   document.getElementById('sub-end').value='';
+  document.getElementById('sub-end').readOnly=false;
+  endPresetYears=0;
+  ['preset-0','preset-1','preset-2'].forEach(id=>document.getElementById(id).classList.remove('active'));
+  onCategoryChange();
   document.getElementById('sub-monthly').value='';
   document.getElementById('sub-price').value='';
   document.getElementById('sub-notes').value='';
@@ -1021,9 +1185,13 @@ function editSub(id){
   document.getElementById('modal-sub-title').textContent='✏️ 수정';
   document.getElementById('sub-vendor').value=s.vendor;
   document.getElementById('sub-category').value=s.category;
-  document.getElementById('sub-type').value=s.type;
+  populateSubSelects(s.deviceType||'',s.grade||'');
   document.getElementById('sub-order').value=s.orderDate;
   document.getElementById('sub-end').value=s.endDate;
+  document.getElementById('sub-end').readOnly=false;
+  endPresetYears=0;
+  ['preset-0','preset-1','preset-2'].forEach(id=>document.getElementById(id).classList.remove('active'));
+  onCategoryChange();
   document.getElementById('sub-monthly').value=s.monthlyPrice;
   document.getElementById('sub-price').value=s.purchasePrice;
   document.getElementById('sub-notes').value=s.notes;
@@ -1039,28 +1207,29 @@ function editSub(id){
 }
 function populateSubAssigned(sel){
   const el=document.getElementById('sub-assigned');
-  el.innerHTML='<option value="">미배정 (재고)</option>'+activeEmps().map(e=>`<option value="${e.id}" ${e.id===sel?'selected':''}>${e.name} (${e.role})</option>`).join('');
+  el.innerHTML='<option value="">미배정 (재고)</option>'+activeEmps().map(e=>`<option value="${e.id}" ${e.id===sel?'selected':''}>${e.name}</option>`).join('');
 }
 function populateVendorDatalist(){
   document.getElementById('vendor-list').innerHTML=db.vendors.map(v=>`<option value="${v.name}">`).join('');
 }
 function saveSubscription(){
   const vendor=document.getElementById('sub-vendor').value.trim();
-  const type=document.getElementById('sub-type').value.trim();
+  const deviceType=document.getElementById('sub-devicetype').value;
   const category=document.getElementById('sub-category').value;
-  if(!vendor||!type){alert('구매처와 유형은 필수입니다.');return;}
+  if(!vendor||!deviceType){alert('구매처와 장비 유형은 필수입니다.');return;}
+  const isSub=category==='subscription';
   const editId=document.getElementById('edit-sub-id').value;
-  const data={vendor,type,category,assignedTo:document.getElementById('sub-assigned').value,orderDate:document.getElementById('sub-order').value,endDate:document.getElementById('sub-end').value,monthlyPrice:Number(document.getElementById('sub-monthly').value)||0,purchasePrice:Number(document.getElementById('sub-price').value)||0,notes:document.getElementById('sub-notes').value.trim(),deviceName:document.getElementById('sub-devicename').value.trim(),manufacturer:document.getElementById('sub-manufacturer').value.trim(),productName:document.getElementById('sub-productname').value.trim(),serialNo:document.getElementById('sub-serial').value.trim(),modelNo:document.getElementById('sub-model').value.trim(),specs:document.getElementById('sub-specs').value.trim()};
+  const data={vendor,deviceType,grade:document.getElementById('sub-grade').value,category,assignedTo:document.getElementById('sub-assigned').value,orderDate:document.getElementById('sub-order').value,endDate:document.getElementById('sub-end').value,monthlyPrice:isSub?(Number(document.getElementById('sub-monthly').value)||0):0,purchasePrice:isSub?0:(Number(document.getElementById('sub-price').value)||0),notes:document.getElementById('sub-notes').value.trim(),deviceName:document.getElementById('sub-devicename').value.trim(),manufacturer:document.getElementById('sub-manufacturer').value.trim(),productName:document.getElementById('sub-productname').value.trim(),serialNo:document.getElementById('sub-serial').value.trim(),modelNo:document.getElementById('sub-model').value.trim(),specs:document.getElementById('sub-specs').value.trim()};
   if(!db.vendors.find(v=>v.name===vendor)) db.vendors.push({id:uid(),name:vendor,url:'',memo:''});
   if(editId){
     const idx=db.subscriptions.findIndex(s=>s.id===editId);
     const old=db.subscriptions[idx];
     db.subscriptions[idx]={...old,...data};
-    addHistory('edit',`구독·자산 수정: ${vendor} · ${type}`,`배정: ${data.assignedTo?(empById(data.assignedTo)?.name||'?'):'미배정'} | 종료: ${data.endDate||'없음'} | 월비용: ${fmtPrice(data.monthlyPrice)}`);
+    addHistory('edit',`구독·자산 수정: ${vendor} · ${data.productName||deviceType}`,`배정: ${data.assignedTo?(empById(data.assignedTo)?.name||'?'):'미배정'} | 종료: ${data.endDate||'없음'} | 월비용: ${fmtPrice(data.monthlyPrice)}`);
   } else {
     db.subscriptions.push({id:uid(),...data});
     const emp=data.assignedTo?empById(data.assignedTo):null;
-    addHistory('add',`구독·자산 추가: ${vendor} · ${type}`,`${category==='subscription'?'구독':'자산'} | 배정: ${emp?emp.name:'미배정'} | 월비용: ${fmtPrice(data.monthlyPrice)}`);
+    addHistory('add',`구독·자산 추가: ${vendor} · ${data.productName||deviceType}`,`${category==='subscription'?'구독':'구매'} | 배정: ${emp?emp.name:'미배정'} | 월비용: ${fmtPrice(data.monthlyPrice)}`);
   }
   saveDB();
   closeModal('modal-add-sub');
@@ -1069,10 +1238,10 @@ function saveSubscription(){
 }
 function deleteSub(id){
   const s=db.subscriptions.find(x=>x.id===id);
-  showConfirm('🗑️',`삭제 확인`,`"${s.vendor} · ${s.type}"을 삭제하시겠습니까?`,()=>{
+  showConfirm('🗑️',`삭제 확인`,`"${s.vendor} · ${subLabel(s)}"을 삭제하시겠습니까?`,()=>{
     db.subscriptions=db.subscriptions.filter(x=>x.id!==id);
     saveDB();
-    addHistory('del',`구독·자산 삭제: ${s.vendor} · ${s.type}`,`종료일: ${s.endDate||'없음'}`);
+    addHistory('del',`구독·자산 삭제: ${s.vendor} · ${subLabel(s)}`,`종료일: ${s.endDate||'없음'}`);
     renderSubscriptions();
     if(currentPage==='dashboard') renderDashboard();
   });
@@ -1080,7 +1249,7 @@ function deleteSub(id){
 function openAssign(subId){
   document.getElementById('assign-sub-id').value=subId;
   const s=db.subscriptions.find(x=>x.id===subId);
-  document.getElementById('assign-emp-select').innerHTML='<option value="">미배정 (재고로 반환)</option>'+activeEmps().map(e=>`<option value="${e.id}" ${e.id===s.assignedTo?'selected':''}>${e.name} (${e.role})</option>`).join('');
+  document.getElementById('assign-emp-select').innerHTML='<option value="">미배정 (재고로 반환)</option>'+activeEmps().map(e=>`<option value="${e.id}" ${e.id===s.assignedTo?'selected':''}>${e.name}</option>`).join('');
   openModal('modal-assign');
 }
 function confirmAssign(){
@@ -1091,7 +1260,7 @@ function confirmAssign(){
   const newEmp=empId?empById(empId):null;
   sub.assignedTo=empId;
   saveDB();
-  addHistory('assign',`배정 변경: ${sub.vendor} · ${sub.type}`,`${prevEmp?prevEmp.name:'미배정'} → ${newEmp?newEmp.name:'미배정 (재고)'}`);
+  addHistory('assign',`배정 변경: ${sub.vendor} · ${subLabel(sub)}`,`${prevEmp?prevEmp.name:'미배정'} → ${newEmp?newEmp.name:'미배정 (재고)'}`);
   closeModal('modal-assign');
   renderSubscriptions();
   if(currentPage==='dashboard') renderDashboard();
@@ -1122,7 +1291,7 @@ function renderCosts(){
 function renderVendors(){
   document.getElementById('vendor-cards').innerHTML=db.vendors.map(v=>`<div class="vendor-card"><div class="vname">${v.name}</div>${v.url?`<a class="vlink" href="${v.url}" target="_blank">🔗 관리자 페이지</a>`:`<span style="font-size:11px;color:var(--text-muted)">URL 없음</span>`}${v.memo?`<div style="font-size:11px;color:var(--text-muted);margin-top:5px">${v.memo}</div>`:''}</div>`).join('')||'<div style="color:var(--text-muted)">구매처 없음</div>';
   const poolMap={};
-  db.subscriptions.forEach(s=>{const k=s.vendor+'||'+s.type;poolMap[k]=poolMap[k]||{vendor:s.vendor,type:s.type,total:0,assigned:0};poolMap[k].total++;if(s.assignedTo)poolMap[k].assigned++;});
+  db.subscriptions.forEach(s=>{const k=s.vendor+'||'+subLabel(s);poolMap[k]=poolMap[k]||{vendor:s.vendor,type:subLabel(s),total:0,assigned:0};poolMap[k].total++;if(s.assignedTo)poolMap[k].assigned++;});
   document.getElementById('vendor-pool-table').innerHTML=Object.values(poolMap).sort((a,b)=>a.vendor.localeCompare(b.vendor)).map(r=>{
     const pct=r.total?Math.round(r.assigned/r.total*100):0;
     const fc=pct===100?'full':pct>=80?'warn':'';
