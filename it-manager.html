@@ -288,6 +288,7 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
     <h1>IT 자산 관리</h1>
     <p>Google 계정으로 로그인하여<br>구독·자산·구성원을 관리하세요.</p>
     <div class="google-btn-wrap" id="google-btn-container"></div>
+    <div id="login-error" style="display:none;margin-top:14px;padding:11px 13px;background:var(--danger-light);border:1px solid #fca5a5;border-radius:8px;font-size:12px;color:#7f1d1d;line-height:1.6"></div>
     <div style="margin-top:16px;font-size:11px;color:var(--text-muted)">
       Client ID: <span id="show-client-id" style="font-family:monospace;font-size:10px"></span>
       <button onclick="resetClientId()" style="border:none;background:none;color:var(--primary);cursor:pointer;font-size:11px;margin-left:4px">변경</button>
@@ -555,6 +556,21 @@ let currentUser = null; // { name, email, picture, initials }
 // 이렇게 해야 새 브라우저·새 기기·다른 팀원이 들어와도 초기 설정 화면을 거치지 않는다.
 const DEFAULT_CLIENT_ID = '604983269586-fvinumj21kg27qlekhfv4qv73oeb9e68.apps.googleusercontent.com';
 
+// 접근 허용 계정. 여기 없는 구글 계정으로 로그인하면 앱에 들어오지 못한다.
+// 네 명 모두 동일 권한 — 조회·수정·삭제 전부 가능하다.
+// 주의: 브라우저에서 도는 검사라 개발자도구를 아는 사람은 우회할 수 있다.
+//       사내 구성원 대상 접근 정리용이지, 외부 유출을 막는 보안 장치가 아니다.
+const ALLOWED_EMAILS = [
+  'chloe.song@whitecube.co.kr',
+  'blair@whitecube.co.kr',
+  'sonnie@whitecube.co.kr',
+  'henry.choi@whitecube.co.kr'
+];
+function isAllowed(email) {
+  const e = (email||'').trim().toLowerCase();
+  return ALLOWED_EMAILS.some(a => a.toLowerCase() === e);
+}
+
 function loadClientId() {
   const override = localStorage.getItem('itm_client_id');
   if (override) return override;
@@ -578,12 +594,16 @@ function initAuth() {
   const clientId = loadClientId();
   hide('screen-setup'); hide('screen-login'); hide('app');
 
-  // Check saved session
+  // 저장된 세션도 매번 다시 검사한다. 목록에서 빠지면 다음 접속에 바로 막힌다.
   const savedUser = localStorage.getItem('itm_user');
   if (savedUser) {
-    currentUser = JSON.parse(savedUser);
-    enterApp();
-    return;
+    const u = JSON.parse(savedUser);
+    if (isAllowed(u.email)) {
+      currentUser = u;
+      enterApp();
+      return;
+    }
+    localStorage.removeItem('itm_user');
   }
 
   if (!clientId) { show('screen-setup'); return; }
@@ -615,6 +635,17 @@ function initGoogleBtn(clientId) {
 
 function handleCredentialResponse(response) {
   const payload = parseJwt(response.credential);
+  if (!isAllowed(payload.email)) {
+    // 구글 인증 자체는 통과했지만 허용 목록에 없는 계정 — 앱에 들여보내지 않는다.
+    if (typeof google !== 'undefined' && google.accounts) google.accounts.id.disableAutoSelect();
+    const box = document.getElementById('login-error');
+    box.innerHTML = `<strong>접근 권한이 없는 계정입니다.</strong><br>
+      <span style="font-family:monospace">${payload.email}</span><br>
+      담당자에게 접근 요청을 해주세요.`;
+    box.style.display = 'block';
+    return;
+  }
+  document.getElementById('login-error').style.display = 'none';
   currentUser = {
     name: payload.name,
     email: payload.email,
