@@ -1431,12 +1431,10 @@ function renderHeadMenu(field){
   }));
   menu.appendChild(document.createElement('hr'));
   keys.forEach(k=>menu.appendChild(mkBtn(headValueLabel(field,k),counts[k],sel.includes(k),()=>{
-    // 아무것도 안 켠 상태(=전체)에서 하나를 끄려는 것이면, 전부 켜고 그것만 뺀다
-    if(!sel.length){ headFilters[field]=keys.filter(x=>x!==k); }
-    else {
-      const i=sel.indexOf(k);
-      if(i>=0) sel.splice(i,1); else sel.push(k);
-    }
+    // 체크가 보이는 그대로 켜고 끈다. 꺼져 있는 걸 누르면 그것만 켜진다.
+    // (전부 켠 뒤 하나만 빼려면 '전체'를 먼저 누르면 된다)
+    const i=sel.indexOf(k);
+    if(i>=0) sel.splice(i,1); else sel.push(k);
     renderSubscriptions(); renderHeadMenu(field);
   })));
 }
