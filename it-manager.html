@@ -136,6 +136,10 @@ td.editable .placeholder{color:#c4c8d0}
   box-shadow:0 0 0 3px rgba(79,70,229,.1)}
 .inline-edit:focus{outline:none}
 .inline-edit.num{text-align:right}
+/* 이름 아니면 빈칸(재고)뿐이라 목록 토글은 군더더기다.
+   화살표만 감추고 타이핑 자동완성은 그대로 둔다. */
+.inline-edit::-webkit-calendar-picker-indicator{display:none!important}
+.inline-edit::-webkit-list-button{display:none!important}
 .grade-stars{color:#f59e0b;letter-spacing:.5px;font-size:11px}
 
 /* ── 표 가독성 ── */
@@ -158,9 +162,12 @@ td.editable .placeholder{color:#c4c8d0}
 .head-menu{display:none;position:fixed;z-index:200;background:var(--surface);border:1px solid var(--border);
   border-radius:9px;box-shadow:0 12px 32px rgba(0,0,0,.14);padding:5px;min-width:170px;max-height:320px;overflow-y:auto}
 .head-menu.open{display:block}
-.head-menu button{display:flex;width:100%;align-items:center;justify-content:space-between;gap:10px;
+.head-menu button{display:flex;width:100%;align-items:center;gap:7px;
   border:none;background:none;text-align:left;padding:7px 10px;border-radius:6px;font-size:12px;
   font-family:inherit;color:var(--text);cursor:pointer;white-space:nowrap}
+.head-menu button .ck{width:12px;flex-shrink:0;color:var(--text-muted);font-size:11px}
+.head-menu button.sel .ck{color:var(--primary)}
+.head-menu button .tx{flex:1;overflow:hidden;text-overflow:ellipsis}
 .head-menu button:hover{background:var(--bg)}
 .head-menu button.sel{background:var(--primary-light);color:var(--primary);font-weight:700}
 .head-menu button .n{color:var(--text-muted);font-size:11px}
@@ -1236,7 +1243,8 @@ function subTab(tab,el){
 }
 // ── 헤더 필터 ────────────────────────────────────────
 // 열 제목을 눌러 값을 고르면 그 값만 남는다. 빈 문자열이면 전체.
-const headFilters={vendor:'',deviceType:'',grade:'',category:'',assignedTo:''};
+// 열마다 여러 값을 동시에 고를 수 있다. 빈 배열이면 그 열은 전체.
+const headFilters={vendor:[],deviceType:[],grade:[],category:[],assignedTo:[]};
 const HEAD_FIELD_LABEL={vendor:'구매처',deviceType:'유형',grade:'등급',category:'구분',assignedTo:'배정'};
 // 목록에 없는 값(미지정·재고)을 빈 문자열과 구분하기 위한 표식
 const NONE=' none';
@@ -1258,17 +1266,9 @@ function openHeadFilter(ev,field){
   const menu=document.getElementById('head-filter-menu');
   if(menu.classList.contains('open')&&menu.dataset.field===field){ menu.classList.remove('open'); return; }
   menu.dataset.field=field;
-  // 다른 필터가 걸린 상태에서 고를 수 있는 값과 건수를 보여준다
-  const base=applyHeadFilters(db.subscriptions,field);
-  const counts={};
-  base.forEach(s=>{const v=headValue(s,field);counts[v]=(counts[v]||0)+1;});
-  const keys=Object.keys(counts).sort((a,b)=>a===NONE?1:b===NONE?-1:headValueLabel(field,a).localeCompare(headValueLabel(field,b)));
-  const cur=headFilters[field];
-  menu.innerHTML=
-    `<button class="${cur?'':'sel'}" onclick="setHeadFilter('${field}','')">전체 <span class="n">${base.length}</span></button><hr>`
-    +keys.map(k=>`<button class="${cur===k?'sel':''}" onclick="setHeadFilter('${field}',${JSON.stringify(k)})">${headValueLabel(field,k)} <span class="n">${counts[k]}</span></button>`).join('');
-  // fixed라 화면 좌표를 그대로 쓴다. 화면 밖으로 나가지 않게 가장자리에서 접어 넣는다.
   menu.classList.add('open');
+  renderHeadMenu(field);
+  // fixed라 화면 좌표를 그대로 쓴다. 화면 밖으로 나가지 않게 가장자리에서 접어 넣는다.
   const th=ev.currentTarget.getBoundingClientRect();
   const w=menu.offsetWidth, h=menu.offsetHeight, pad=8;
   let left=th.left, top=th.bottom+4;
@@ -1277,20 +1277,51 @@ function openHeadFilter(ev,field){
   menu.style.left=left+'px';
   menu.style.top=top+'px';
 }
-function setHeadFilter(field,value){
-  headFilters[field]=value;
-  document.getElementById('head-filter-menu').classList.remove('open');
-  renderSubscriptions();
+// 여러 개를 연달아 고를 수 있어야 하므로 항목을 눌러도 메뉴를 닫지 않고 제자리에서 다시 그린다.
+function renderHeadMenu(field){
+  const menu=document.getElementById('head-filter-menu');
+  // 다른 열의 필터가 걸린 상태에서 고를 수 있는 값과 건수만 보여준다
+  const base=applyHeadFilters(db.subscriptions,field);
+  const counts={};
+  base.forEach(s=>{const v=headValue(s,field);counts[v]=(counts[v]||0)+1;});
+  const keys=Object.keys(counts).sort((a,b)=>a===NONE?1:b===NONE?-1:headValueLabel(field,a).localeCompare(headValueLabel(field,b)));
+  const sel=headFilters[field];
+  // 값을 onclick 속성 문자열에 끼워 넣으면 따옴표가 섞이는 순간 속성이 깨진다.
+  // 값은 클로저로 넘기고 리스너를 직접 붙인다.
+  menu.innerHTML='';
+  const mkBtn=(label,count,checked,onClick,isAll)=>{
+    const b=document.createElement('button');
+    if(checked) b.className='sel';
+    const mark=document.createElement('span');
+    mark.className='ck'; mark.textContent=isAll?'':(checked?'☑':'☐');
+    b.appendChild(mark);
+    const t=document.createElement('span'); t.className='tx'; t.textContent=label;
+    b.appendChild(t);
+    const n=document.createElement('span'); n.className='n'; n.textContent=count;
+    b.appendChild(n);
+    b.addEventListener('click',ev=>{ ev.stopPropagation(); onClick(); });
+    return b;
+  };
+  menu.appendChild(mkBtn('전체',base.length,!sel.length,()=>{
+    headFilters[field]=[]; renderSubscriptions(); renderHeadMenu(field);
+  },true));
+  menu.appendChild(document.createElement('hr'));
+  keys.forEach(k=>menu.appendChild(mkBtn(headValueLabel(field,k),counts[k],sel.includes(k),()=>{
+    const i=sel.indexOf(k);
+    if(i>=0) sel.splice(i,1); else sel.push(k);
+    renderSubscriptions(); renderHeadMenu(field);
+  })));
 }
 function clearHeadFilters(){
-  Object.keys(headFilters).forEach(k=>headFilters[k]='');
+  Object.keys(headFilters).forEach(k=>headFilters[k]=[]);
+  document.getElementById('head-filter-menu').classList.remove('open');
   renderSubscriptions();
 }
 // except를 주면 그 열만 빼고 적용한다 (메뉴에 고를 값이 남아 있게 하려고)
 function applyHeadFilters(list,except){
   Object.keys(headFilters).forEach(f=>{
-    if(f===except||!headFilters[f]) return;
-    list=list.filter(s=>headValue(s,f)===headFilters[f]);
+    if(f===except||!headFilters[f].length) return;
+    list=list.filter(s=>headFilters[f].includes(headValue(s,f)));
   });
   return list;
 }
@@ -1311,10 +1342,13 @@ function renderSubscriptions(){
   // 걸린 필터를 헤더에 표시하고, 하나라도 있으면 해제 버튼을 띄운다
   let anyFilter=false;
   document.querySelectorAll('#page-subscriptions thead th.filt').forEach(th=>{
-    const f=th.dataset.f, v=headFilters[f];
-    th.classList.toggle('on',!!v);
-    th.innerHTML=(v?`${HEAD_FIELD_LABEL[f]}: ${headValueLabel(f,v)}`:HEAD_FIELD_LABEL[f])+' <span class="fi">▾</span>';
-    if(v) anyFilter=true;
+    const f=th.dataset.f, sel=headFilters[f];
+    th.classList.toggle('on',!!sel.length);
+    let label=HEAD_FIELD_LABEL[f];
+    if(sel.length===1) label+=`: ${headValueLabel(f,sel[0])}`;
+    else if(sel.length>1) label+=`: ${headValueLabel(f,sel[0])} 외 ${sel.length-1}`;
+    th.innerHTML=label+' <span class="fi">▾</span>';
+    if(sel.length) anyFilter=true;
   });
   document.getElementById('clear-filters').style.display=anyFilter?'':'none';
 
