@@ -459,6 +459,7 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
         <th class="filt" data-f="vendor" onclick="openHeadFilter(event,'vendor')">구매처 <span class="fi">▾</span></th>
         <th class="filt" data-f="deviceType" onclick="openHeadFilter(event,'deviceType')">유형 <span class="fi">▾</span></th>
         <th class="filt" data-f="grade" onclick="openHeadFilter(event,'grade')">등급 <span class="fi">▾</span></th>
+        <th class="filt" data-f="purpose" onclick="openHeadFilter(event,'purpose')">용도 <span class="fi">▾</span></th>
         <th class="filt" data-f="category" onclick="openHeadFilter(event,'category')">구분 <span class="fi">▾</span></th>
         <th class="filt" data-f="assignedTo" onclick="openHeadFilter(event,'assignedTo')">배정 <span class="fi">▾</span></th>
         <th>제품명</th><th>시리얼</th><th>주문일</th><th>종료일</th><th>금액</th><th>예상 매각가</th><th></th>
@@ -539,7 +540,7 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
     <div class="card">
       <div class="card-header"><div class="card-title">목록 관리</div></div>
       <div class="hint-inline">입력칸에 새 값을 치면 자동으로 추가됩니다. 여기서는 잘못 들어간 항목을 지우거나 등급 별점을 조정합니다.</div>
-      <div class="grid-3">
+      <div class="grid-2" style="gap:24px">
         <div>
           <div class="list-head">구매처</div>
           <div id="mng-vendors" class="chip-list"></div>
@@ -549,6 +550,11 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
           <div class="list-head">장비 유형</div>
           <div id="mng-types" class="chip-list"></div>
           <div class="mng-add"><input id="mng-type-input" placeholder="새 유형" onkeydown="if(event.key==='Enter')addTypeItem()"><button class="btn btn-ghost btn-sm" onclick="addTypeItem()">추가</button></div>
+        </div>
+        <div>
+          <div class="list-head">용도</div>
+          <div id="mng-purposes" class="chip-list"></div>
+          <div class="mng-add"><input id="mng-purpose-input" placeholder="새 용도" onkeydown="if(event.key==='Enter')addPurposeItem()"><button class="btn btn-ghost btn-sm" onclick="addPurposeItem()">추가</button></div>
         </div>
         <div>
           <div class="list-head">등급</div>
@@ -625,6 +631,11 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
         <datalist id="grade-list"></datalist>
         <div class="form-hint">새 등급은 별점 0으로 추가됩니다.</div>
       </div>
+    </div>
+    <div class="form-group"><label class="form-label">용도</label>
+      <input class="form-control" id="sub-purpose" list="purpose-list" placeholder="기본" autocomplete="off">
+      <datalist id="purpose-list"></datalist>
+      <div class="form-hint">비워두면 기본입니다. 크롤링용·타운홀용처럼 새 용도를 치면 목록에 추가됩니다.</div>
     </div>
     <div class="form-group"><label class="form-label">배정 구성원</label>
       <input class="form-control" id="sub-assigned" list="employee-list" placeholder="비워두면 재고" autocomplete="off">
@@ -896,8 +907,16 @@ const DEFAULT_GRADES = [
   { key:'프론트용', stars:3 },
   { key:'백엔드용', stars:4 }
 ];
+// 용도 — 대부분 '기본'이고 가끔 크롤링용·타운홀용처럼 특수 목적 장비가 있다.
+const DEFAULT_PURPOSES = ['기본','크롤링용','타운홀용'];
+const DEFAULT_PURPOSE = '기본';
 function deviceTypes() { return (db.settings&&db.settings.deviceTypes)||DEFAULT_DEVICE_TYPES; }
 function grades()      { return (db.settings&&db.settings.grades)||DEFAULT_GRADES; }
+function purposes()    { return (db.settings&&db.settings.purposes)||DEFAULT_PURPOSES; }
+function ensurePurpose(p) {
+  if(!p) return;
+  if(!db.settings.purposes.includes(p)){ db.settings.purposes.push(p); addHistory('add',`용도 추가: ${p}`,''); }
+}
 
 // ── 감가상각 ────────────────────────────────────────
 // 법인세법 시행령 제26조에 따라 월할 계산한다. 일·주 단위 상각은 세법에 없다.
@@ -991,10 +1010,11 @@ function loadDB() {
     if (!db.settings.deviceTypes) db.settings.deviceTypes=[...DEFAULT_DEVICE_TYPES];
     if (!db.settings.grades) db.settings.grades=DEFAULT_GRADES.map(g=>({...g}));
     if (!db.settings.usefulLifeYears) db.settings.usefulLifeYears=DEFAULT_USEFUL_LIFE;
+    if (!db.settings.purposes) db.settings.purposes=[...DEFAULT_PURPOSES];
   }
   else {
     db = {
-      settings: { deviceTypes:[...DEFAULT_DEVICE_TYPES], grades:DEFAULT_GRADES.map(g=>({...g})), usefulLifeYears:DEFAULT_USEFUL_LIFE },
+      settings: { deviceTypes:[...DEFAULT_DEVICE_TYPES], grades:DEFAULT_GRADES.map(g=>({...g})), purposes:[...DEFAULT_PURPOSES], usefulLifeYears:DEFAULT_USEFUL_LIFE },
       vendors: [
         {id:'v1',name:'고위드',url:'https://www.gowid.com/newpages/spend-optimization/devices',memo:'노트북 구독 서비스'},
         {id:'v2',name:'페이시',url:'https://www.pacey.co.kr/mypage/index.php',memo:'노트북 렌탈 서비스'}
@@ -1005,57 +1025,57 @@ function loadDB() {
         {id:'e3',name:'루시',joinDate:'2026-08-03',leaveDate:null,note:''}
       ],
       subscriptions: [
-        {id:'s1',vendor:'고위드',deviceType:'노트북',grade:'일반용',category:'subscription',assignedTo:'e1',
+        {id:'s1',vendor:'고위드',deviceType:'노트북',grade:'일반용',purpose:'기본',category:'subscription',assignedTo:'e1',
          orderDate:'2026-07-28',endDate:'',monthlyPrice:68500,purchasePrice:0,
          deviceName:'LG 그램 16',manufacturer:'LG',productName:'그램 16',
          serialNo:'605NZET074228',modelNo:'16Z90TL-GS5WK',
          specs:'화이트, Ultra5 226V, 16GB, 512GB, 16인치',notes:''},
-        {id:'s2',vendor:'고위드',deviceType:'노트북',grade:'프론트용',category:'subscription',assignedTo:'e2',
+        {id:'s2',vendor:'고위드',deviceType:'노트북',grade:'프론트용',purpose:'기본',category:'subscription',assignedTo:'e2',
          orderDate:'2026-07-28',endDate:'',monthlyPrice:137000,purchasePrice:0,
          deviceName:'맥북 프로 14',manufacturer:'Apple',productName:'맥북 프로 14',
          serialNo:'H4MWXX29YJ',modelNo:'MGDR4KH/A',
          specs:'스페이스 블랙, M5 Pro 15코어, 16코어, 24GB, 1TB, 14인치',notes:''},
-        {id:'s3',vendor:'고위드',deviceType:'노트북',grade:'프론트용',category:'subscription',assignedTo:'e3',
+        {id:'s3',vendor:'고위드',deviceType:'노트북',grade:'프론트용',purpose:'기본',category:'subscription',assignedTo:'e3',
          orderDate:'2026-07-30',endDate:'',monthlyPrice:137000,purchasePrice:0,
          deviceName:'맥북 프로 14',manufacturer:'Apple',productName:'맥북 프로 14',
          serialNo:'HVVH3H730Y',modelNo:'MGDR4KH/A',
          specs:'스페이스 블랙, M5 Pro 15코어, 16코어, 24GB, 1TB, 14인치',notes:''},
-        {id:'s4',vendor:'페이시',deviceType:'노트북',grade:'',category:'subscription',assignedTo:'',
+        {id:'s4',vendor:'페이시',deviceType:'노트북',grade:'',purpose:'기본',category:'subscription',assignedTo:'',
          orderDate:'2024-12-12',endDate:'2026-12-11',monthlyPrice:141620,purchasePrice:0,
          deviceName:'맥북프로 14 M3 PRO',manufacturer:'Apple',productName:'맥북프로 14 M3 PRO',
          serialNo:'CK62G6QKG1',modelNo:'',
          specs:'M3 PRO 12C/18G (18G/1T) 중급형',notes:''},
-        {id:'s5',vendor:'페이시',deviceType:'노트북',grade:'',category:'subscription',assignedTo:'',
+        {id:'s5',vendor:'페이시',deviceType:'노트북',grade:'',purpose:'기본',category:'subscription',assignedTo:'',
          orderDate:'2024-12-12',endDate:'2026-12-11',monthlyPrice:56260,purchasePrice:0,
          deviceName:'맥북에어 13 M3',manufacturer:'Apple',productName:'맥북에어 13 M3',
          serialNo:'K00H2DLX2C',modelNo:'',
          specs:'M3 8C/8G (16G/256G) 기본형',notes:''},
-        {id:'s6',vendor:'페이시',deviceType:'노트북',grade:'',category:'subscription',assignedTo:'',
+        {id:'s6',vendor:'페이시',deviceType:'노트북',grade:'',purpose:'기본',category:'subscription',assignedTo:'',
          orderDate:'2024-12-12',endDate:'2026-12-11',monthlyPrice:56260,purchasePrice:0,
          deviceName:'맥북에어 13 M3',manufacturer:'Apple',productName:'맥북에어 13 M3',
          serialNo:'J494MXHC9R',modelNo:'',
          specs:'M3 8C/8G (16G/256G) 기본형',notes:''},
-        {id:'s7',vendor:'페이시',deviceType:'노트북',grade:'',category:'subscription',assignedTo:'',
+        {id:'s7',vendor:'페이시',deviceType:'노트북',grade:'',purpose:'기본',category:'subscription',assignedTo:'',
          orderDate:'2025-01-02',endDate:'2027-01-01',monthlyPrice:188180,purchasePrice:0,
          deviceName:'맥북프로 14 M4 MAX',manufacturer:'Apple',productName:'맥북프로 14 M4 MAX',
          serialNo:'J2V6L23JGK',modelNo:'',
          specs:'M4 MAX 14C/32G (36G/1T) 고급형',notes:''},
-        {id:'s8',vendor:'페이시',deviceType:'노트북',grade:'',category:'subscription',assignedTo:'',
+        {id:'s8',vendor:'페이시',deviceType:'노트북',grade:'',purpose:'기본',category:'subscription',assignedTo:'',
          orderDate:'2025-01-02',endDate:'2027-01-01',monthlyPrice:188180,purchasePrice:0,
          deviceName:'맥북프로 14 M4 MAX',manufacturer:'Apple',productName:'맥북프로 14 M4 MAX',
          serialNo:'G4XRGXC2CM',modelNo:'',
          specs:'M4 MAX 14C/32G (36G/1T) 고급형',notes:''},
-        {id:'s9',vendor:'페이시',deviceType:'노트북',grade:'',category:'subscription',assignedTo:'',
+        {id:'s9',vendor:'페이시',deviceType:'노트북',grade:'',purpose:'기본',category:'subscription',assignedTo:'',
          orderDate:'2025-01-02',endDate:'2027-01-01',monthlyPrice:147440,purchasePrice:0,
          deviceName:'맥북프로 16 M4 PRO',manufacturer:'Apple',productName:'맥북프로 16 M4 PRO',
          serialNo:'JCW3JX5R9M',modelNo:'',
          specs:'M4 PRO 14C/20G (48G/512G) 중급형',notes:''},
-        {id:'s10',vendor:'페이시',deviceType:'노트북',grade:'',category:'subscription',assignedTo:'',
+        {id:'s10',vendor:'페이시',deviceType:'노트북',grade:'',purpose:'기본',category:'subscription',assignedTo:'',
          orderDate:'2025-01-02',endDate:'2027-01-01',monthlyPrice:127070,purchasePrice:0,
          deviceName:'맥북프로 14 M4 PRO',manufacturer:'Apple',productName:'맥북프로 14 M4 PRO',
          serialNo:'M7M0V9RH3Y',modelNo:'',
          specs:'M4 PRO 14C/20G (24G/1T) 중급형',notes:''},
-        {id:'s11',vendor:'페이시',deviceType:'노트북',grade:'',category:'subscription',assignedTo:'',
+        {id:'s11',vendor:'페이시',deviceType:'노트북',grade:'',purpose:'기본',category:'subscription',assignedTo:'',
          orderDate:'2024-11-21',endDate:'2026-11-20',monthlyPrice:56260,purchasePrice:0,
          deviceName:'맥북에어 13 M3',manufacturer:'Apple',productName:'맥북에어 13 M3',
          serialNo:'KG6HFHWF75',modelNo:'',
@@ -1364,14 +1384,15 @@ function subTab(tab,el){
 // ── 헤더 필터 ────────────────────────────────────────
 // 열 제목을 눌러 값을 고르면 그 값만 남는다. 빈 문자열이면 전체.
 // 열마다 여러 값을 동시에 고를 수 있다. 빈 배열이면 그 열은 전체.
-const headFilters={vendor:[],deviceType:[],grade:[],category:[],assignedTo:[]};
-const HEAD_FIELD_LABEL={vendor:'구매처',deviceType:'유형',grade:'등급',category:'구분',assignedTo:'배정'};
+const headFilters={vendor:[],deviceType:[],grade:[],purpose:[],category:[],assignedTo:[]};
+const HEAD_FIELD_LABEL={vendor:'구매처',deviceType:'유형',grade:'등급',purpose:'용도',category:'구분',assignedTo:'배정'};
 // 목록에 없는 값(미지정·재고)을 빈 문자열과 구분하기 위한 표식
 const NONE=' none';
 function headValue(s,field){
   if(field==='assignedTo') return s.assignedTo||NONE;
   if(field==='grade') return s.grade||NONE;
   if(field==='deviceType') return s.deviceType||NONE;
+  if(field==='purpose') return s.purpose||NONE;
   return s[field]||NONE;
 }
 function headValueLabel(field,v){
@@ -1462,7 +1483,7 @@ function renderSubscriptions(){
   if(subCurrentTab==='subscription') list=list.filter(s=>s.category==='subscription');
   if(subCurrentTab==='asset') list=list.filter(s=>s.category==='asset');
   if(subCurrentTab==='unassigned') list=list.filter(s=>!s.assignedTo);
-  if(q) list=list.filter(s=>[s.vendor,s.deviceType,s.grade,s.productName,s.serialNo].some(f=>(f||'').toLowerCase().includes(q)));
+  if(q) list=list.filter(s=>[s.vendor,s.deviceType,s.grade,s.purpose,s.productName,s.serialNo].some(f=>(f||'').toLowerCase().includes(q)));
   list=applyHeadFilters(list);
 
   // 걸린 필터를 헤더에 표시하고, 하나라도 있으면 해제 버튼을 띄운다
@@ -1479,7 +1500,7 @@ function renderSubscriptions(){
   document.getElementById('clear-filters').style.display=anyFilter?'':'none';
 
   const tbody=document.getElementById('sub-table');
-  if(!list.length){tbody.innerHTML=`<tr><td colspan="12"><div class="empty"><div class="ei">📋</div><div class="et">항목 없음</div><div class="ed">${anyFilter?'필터를 해제해보세요':''}</div></div></td></tr>`;return;}
+  if(!list.length){tbody.innerHTML=`<tr><td colspan="13"><div class="empty"><div class="ei">📋</div><div class="et">항목 없음</div><div class="ed">${anyFilter?'필터를 해제해보세요':''}</div></div></td></tr>`;return;}
   tbody.innerHTML=list.map(s=>{
     const dl=daysLeft(s.endDate);
     const dueBadge=s.endDate?` <span class="badge ${dl<=0?'badge-expired':dl<=30?'badge-expiring':dl<=90?'badge-warn':'badge-ok'}">${dl<=0?'만료':dl+'일'}</span>`:'';
@@ -1495,6 +1516,7 @@ function renderSubscriptions(){
       <td><span class="badge badge-primary">${s.vendor}</span></td>
       <td>${s.deviceType||'<span style="color:var(--text-muted)">—</span>'}</td>
       <td>${s.grade?`${s.grade}${stars?` <span class="grade-stars">${'★'.repeat(stars)}</span>`:''}`:'<span style="color:var(--text-muted)">미지정</span>'}</td>
+      <td>${s.purpose&&s.purpose!==DEFAULT_PURPOSE?`<span class="badge badge-warn">${s.purpose}</span>`:`<span style="color:var(--text-muted)">${s.purpose||DEFAULT_PURPOSE}</span>`}</td>
       <td>${isSub?'<span class="badge badge-sub">구독</span>':'<span class="badge badge-asset">구매</span>'}</td>
       <td class="editable" title="클릭해서 배정 변경" onclick="editCell(this,'${s.id}','assignedTo')"><span class="ev${s.assignedTo?'':' placeholder'}">${s.assignedTo?`<span class="chip chip-member">${empById(s.assignedTo)?.name||'?'}</span>`:'재고'}</span></td>
       <td><div class="prod" title="${prodName}">${prodName}</div>${s.specs?`<div class="spec" title="${s.specs}">${s.specs}</div>`:''}</td>
@@ -1607,11 +1629,13 @@ function setEndPreset(years){
   end.value=addYears(document.getElementById('sub-order').value||today(),years);
 }
 function refreshEndPreset(){ if(endPresetYears) setEndPreset(endPresetYears); }
-function populateSubSelects(deviceType,grade){
+function populateSubSelects(deviceType,grade,purpose){
   document.getElementById('sub-devicetype').value=deviceType||'';
   document.getElementById('sub-grade').value=grade||'';
+  document.getElementById('sub-purpose').value=purpose||'';
   document.getElementById('devicetype-list').innerHTML=deviceTypes().map(t=>`<option value="${t}">`).join('');
   document.getElementById('grade-list').innerHTML=grades().map(g=>`<option value="${g.key}">${g.stars?'★'.repeat(g.stars):''}</option>`).join('');
+  document.getElementById('purpose-list').innerHTML=purposes().map(t=>`<option value="${t}">`).join('');
   document.getElementById('employee-list').innerHTML=activeEmps().map(e=>`<option value="${e.name}">`).join('');
 }
 
@@ -1621,7 +1645,7 @@ function openAddSub(){
   document.getElementById('sub-vendor').value='';
   document.getElementById('sub-category').value='subscription';
   document.getElementById('sub-depreciate').checked=false;
-  populateSubSelects('','');
+  populateSubSelects('','','');
   document.getElementById('sub-order').value=today();
   document.getElementById('sub-end').value='';
   document.getElementById('sub-end').readOnly=false;
@@ -1649,7 +1673,7 @@ function editSub(id){
   document.getElementById('sub-vendor').value=s.vendor;
   document.getElementById('sub-category').value=s.category;
   document.getElementById('sub-depreciate').checked=isDepreciable(s);
-  populateSubSelects(s.deviceType||'',s.grade||'');
+  populateSubSelects(s.deviceType||'',s.grade||'',s.purpose||'');
   document.getElementById('sub-order').value=s.orderDate;
   document.getElementById('sub-end').value=s.endDate;
   document.getElementById('sub-end').readOnly=false;
@@ -1679,15 +1703,16 @@ function saveSubscription(){
   const vendor=document.getElementById('sub-vendor').value.trim();
   const deviceType=document.getElementById('sub-devicetype').value.trim();
   const grade=document.getElementById('sub-grade').value.trim();
+  const purpose=document.getElementById('sub-purpose').value.trim()||DEFAULT_PURPOSE;
   const assignedName=document.getElementById('sub-assigned').value.trim();
   const category=document.getElementById('sub-category').value;
   if(!vendor||!deviceType){alert('구매처와 장비 유형은 필수입니다.');return;}
   // 입력칸에 새로 친 값은 그대로 목록에 등록해서 다음부터 자동완성에 뜨게 한다.
-  ensureVendor(vendor); ensureDeviceType(deviceType); ensureGrade(grade);
+  ensureVendor(vendor); ensureDeviceType(deviceType); ensureGrade(grade); ensurePurpose(purpose);
   const assignedTo=ensureEmployee(assignedName);
   const isSub=category==='subscription';
   const editId=document.getElementById('edit-sub-id').value;
-  const data={vendor,deviceType,grade,category,assignedTo,depreciate:document.getElementById('sub-depreciate').checked,orderDate:document.getElementById('sub-order').value,endDate:document.getElementById('sub-end').value,monthlyPrice:isSub?(Number(document.getElementById('sub-monthly').value)||0):0,purchasePrice:isSub?0:(Number(document.getElementById('sub-price').value)||0),notes:document.getElementById('sub-notes').value.trim(),deviceName:document.getElementById('sub-devicename').value.trim(),manufacturer:document.getElementById('sub-manufacturer').value.trim(),productName:document.getElementById('sub-productname').value.trim(),serialNo:document.getElementById('sub-serial').value.trim(),modelNo:document.getElementById('sub-model').value.trim(),specs:document.getElementById('sub-specs').value.trim()};
+  const data={vendor,deviceType,grade,purpose,category,assignedTo,depreciate:document.getElementById('sub-depreciate').checked,orderDate:document.getElementById('sub-order').value,endDate:document.getElementById('sub-end').value,monthlyPrice:isSub?(Number(document.getElementById('sub-monthly').value)||0):0,purchasePrice:isSub?0:(Number(document.getElementById('sub-price').value)||0),notes:document.getElementById('sub-notes').value.trim(),deviceName:document.getElementById('sub-devicename').value.trim(),manufacturer:document.getElementById('sub-manufacturer').value.trim(),productName:document.getElementById('sub-productname').value.trim(),serialNo:document.getElementById('sub-serial').value.trim(),modelNo:document.getElementById('sub-model').value.trim(),specs:document.getElementById('sub-specs').value.trim()};
   if(editId){
     const idx=db.subscriptions.findIndex(s=>s.id===editId);
     const old=db.subscriptions[idx];
@@ -1810,6 +1835,7 @@ const IMPORT_COLS=[
   {key:'vendor',       head:'구매처'},
   {key:'deviceType',   head:'유형'},
   {key:'grade',        head:'등급'},
+  {key:'purpose',      head:'용도'},
   {key:'category',     head:'구분'},
   {key:'assigned',     head:'배정'},
   {key:'productName',  head:'제품명'},
@@ -1900,7 +1926,7 @@ function previewImport(){
     const exist=serial?db.subscriptions.find(s=>s.serialNo&&s.serialNo===serial):null;
     parsed.push({
       mode: exist?'수정':'신규', existId: exist?exist.id:null,
-      vendor, deviceType:g('deviceType'), grade:g('grade'), category:cat,
+      vendor, deviceType:g('deviceType'), grade:g('grade'), purpose:g('purpose')||DEFAULT_PURPOSE, category:cat,
       assignedName:g('assigned')==='재고'?'':g('assigned'),
       productName:g('productName'), serialNo:serial, manufacturer:g('manufacturer'),
       modelNo:g('modelNo'), specs:g('specs'),
@@ -1920,10 +1946,10 @@ function previewImport(){
        <div><strong>${parsed.length}건</strong> — 신규 ${add}건, 기존 수정 ${upd}건${noSerial?` · 시리얼 없는 행 ${noSerial}건은 항상 신규로 추가됩니다`:''}</div>
      </div>`
     +(warns.length?`<div class="alert alert-warn" style="margin-bottom:9px;display:block"><div style="font-size:12px;line-height:1.7">${warns.slice(0,8).map(w=>'· '+w).join('<br>')}${warns.length>8?`<br>… 외 ${warns.length-8}건`:''}</div></div>`:'')
-    +`<div class="table-wrap" style="max-height:210px;overflow-y:auto"><table><thead><tr><th></th><th>구매처</th><th>유형</th><th>등급</th><th>구분</th><th>배정</th><th>제품명</th><th>시리얼</th><th>금액</th></tr></thead><tbody>`
+    +`<div class="table-wrap" style="max-height:210px;overflow-y:auto"><table><thead><tr><th></th><th>구매처</th><th>유형</th><th>등급</th><th>용도</th><th>구분</th><th>배정</th><th>제품명</th><th>시리얼</th><th>금액</th></tr></thead><tbody>`
     +parsed.slice(0,30).map(p=>`<tr>
         <td><span class="badge ${p.mode==='신규'?'badge-ok':'badge-primary'}">${p.mode}</span></td>
-        <td>${p.vendor||'—'}</td><td>${p.deviceType||'—'}</td><td>${p.grade||'미지정'}</td>
+        <td>${p.vendor||'—'}</td><td>${p.deviceType||'—'}</td><td>${p.grade||'미지정'}</td><td>${p.purpose||DEFAULT_PURPOSE}</td>
         <td>${p.category==='subscription'?'구독':'구매'}</td><td>${p.assignedName||'재고'}</td>
         <td>${p.productName||'—'}</td><td class="serial">${p.serialNo||'—'}</td>
         <td class="amt">${fmtPrice(p.category==='subscription'?p.monthlyPrice:p.purchasePrice)}</td>
@@ -1935,9 +1961,9 @@ function applyImport(){
   if(!importRows||!importRows.length) return;
   let add=0,upd=0;
   importRows.forEach(p=>{
-    ensureVendor(p.vendor); ensureDeviceType(p.deviceType); ensureGrade(p.grade);
+    ensureVendor(p.vendor); ensureDeviceType(p.deviceType); ensureGrade(p.grade); ensurePurpose(p.purpose);
     const assignedTo=ensureEmployee(p.assignedName);
-    const data={vendor:p.vendor,deviceType:p.deviceType,grade:p.grade,category:p.category,assignedTo,
+    const data={vendor:p.vendor,deviceType:p.deviceType,grade:p.grade,purpose:p.purpose,category:p.category,assignedTo,
       orderDate:p.orderDate,endDate:p.endDate,monthlyPrice:p.monthlyPrice,purchasePrice:p.purchasePrice,
       productName:p.productName,serialNo:p.serialNo,manufacturer:p.manufacturer,modelNo:p.modelNo,
       specs:p.specs,notes:p.notes};
@@ -1959,7 +1985,7 @@ function exportCsv(){
   const esc=v=>{ const s=String(v??''); return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; };
   const lines=[IMPORT_COLS.map(c=>c.head).join(',')];
   db.subscriptions.forEach(s=>{
-    lines.push([s.vendor,s.deviceType,s.grade,s.category==='subscription'?'구독':'구매',
+    lines.push([s.vendor,s.deviceType,s.grade,s.purpose||DEFAULT_PURPOSE,s.category==='subscription'?'구독':'구매',
       empNameOf(s.assignedTo)||'재고',s.productName,s.serialNo,s.manufacturer,s.modelNo,s.specs,
       s.orderDate,s.endDate,s.monthlyPrice||'',s.purchasePrice||'',s.notes].map(esc).join(','));
   });
@@ -2055,11 +2081,12 @@ function renderVendors(){
 // ── 목록 관리 (구매처 / 장비 유형 / 등급) ──────────────
 // 삭제할 때 그 값을 쓰고 있는 항목 수를 세어 먼저 알려준다.
 function renderManageLists(){
-  const useV={}, useT={}, useG={};
+  const useV={}, useT={}, useG={}, useP={};
   db.subscriptions.forEach(s=>{
     useV[s.vendor]=(useV[s.vendor]||0)+1;
     if(s.deviceType) useT[s.deviceType]=(useT[s.deviceType]||0)+1;
     if(s.grade) useG[s.grade]=(useG[s.grade]||0)+1;
+    const pp=s.purpose||DEFAULT_PURPOSE; useP[pp]=(useP[pp]||0)+1;
   });
   // 이름을 누르면 그 자리에서 고칠 수 있다. 바꾸면 그 값을 쓰던 항목이 전부 따라 바뀐다.
   const chip=(kind,key,label,extra,count)=>
@@ -2069,16 +2096,19 @@ function renderManageLists(){
     db.vendors.map(v=>chip('vendor',v.name,v.name,'',useV[v.name]||0)).join('')||empty;
   document.getElementById('mng-types').innerHTML=
     deviceTypes().map(t=>chip('type',t,t,'',useT[t]||0)).join('')||empty;
+  document.getElementById('mng-purposes').innerHTML=
+    purposes().map(t=>chip('purpose',t,t,'',useP[t]||0)).join('')||empty;
   document.getElementById('mng-grades').innerHTML=
     grades().map(g=>chip('grade',g.key,g.key,g.stars?` <span class="st">${'★'.repeat(g.stars)}</span>`:'',useG[g.key]||0)).join('')||empty;
 }
 
-const KIND_LABEL={vendor:'구매처',type:'장비 유형',grade:'등급'};
-const KIND_FIELD={vendor:'vendor',type:'deviceType',grade:'grade'};
+const KIND_LABEL={vendor:'구매처',type:'장비 유형',grade:'등급',purpose:'용도'};
+const KIND_FIELD={vendor:'vendor',type:'deviceType',grade:'grade',purpose:'purpose'};
 function usedCount(kind,key){ return db.subscriptions.filter(s=>s[KIND_FIELD[kind]]===key).length; }
 function listKeys(kind){
   if(kind==='vendor') return db.vendors.map(v=>v.name);
   if(kind==='type')   return deviceTypes();
+  if(kind==='purpose') return purposes();
   return grades().map(g=>g.key);
 }
 function startRename(el,kind,key){
@@ -2105,6 +2135,7 @@ function applyRename(kind,oldKey,newKey){
   const field=KIND_FIELD[kind];
   if(kind==='vendor'){ const v=db.vendors.find(x=>x.name===oldKey); if(v) v.name=newKey; }
   else if(kind==='type'){ db.settings.deviceTypes=db.settings.deviceTypes.map(t=>t===oldKey?newKey:t); }
+  else if(kind==='purpose'){ db.settings.purposes=db.settings.purposes.map(t=>t===oldKey?newKey:t); }
   else { const g=db.settings.grades.find(x=>x.key===oldKey); if(g) g.key=newKey; }
   let n=0;
   db.subscriptions.forEach(s=>{ if(s[field]===oldKey){ s[field]=newKey; n++; } });
@@ -2121,6 +2152,7 @@ function delListItem(kind,key){
     ()=>{
       if(kind==='vendor')    db.vendors=db.vendors.filter(v=>v.name!==key);
       else if(kind==='type') db.settings.deviceTypes=db.settings.deviceTypes.filter(t=>t!==key);
+      else if(kind==='purpose') db.settings.purposes=db.settings.purposes.filter(t=>t!==key);
       else                   db.settings.grades=db.settings.grades.filter(g=>g.key!==key);
       saveDB();
       addHistory('del',`${KIND_LABEL[kind]} 삭제: ${key}`,n?`사용 중 ${n}건`:'');
@@ -2140,6 +2172,13 @@ function addTypeItem(){
   if(db.settings.deviceTypes.includes(t)){alert('이미 있는 유형입니다.');return;}
   db.settings.deviceTypes.push(t);
   saveDB(); addHistory('add',`장비 유형 추가: ${t}`,''); el.value=''; renderVendors();
+}
+function addPurposeItem(){
+  const el=document.getElementById('mng-purpose-input'), t=el.value.trim();
+  if(!t) return;
+  if(db.settings.purposes.includes(t)){alert('이미 있는 용도입니다.');return;}
+  db.settings.purposes.push(t);
+  saveDB(); addHistory('add',`용도 추가: ${t}`,''); el.value=''; renderVendors();
 }
 function addGradeItem(){
   const el=document.getElementById('mng-grade-input'), k=el.value.trim();
