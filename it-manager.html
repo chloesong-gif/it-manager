@@ -105,6 +105,16 @@ tbody tr:last-child td{border-bottom:none}
 tbody tr:hover{background:var(--bg)}
 
 .hint-inline{font-size:12px;color:var(--text-muted);background:var(--bg);border-radius:10px;padding:11px 14px;margin-bottom:12px;line-height:1.6}
+.more-btn{border:none;background:none;padding:1px 0 0;font-size:10px;font-family:inherit;color:var(--primary);cursor:pointer;font-weight:600}
+.more-btn:hover{text-decoration:underline}
+.calc-table{width:100%;font-size:13px;margin-bottom:14px}
+.calc-table td{padding:8px 0;border-bottom:1px solid var(--border)}
+.calc-table td:first-child{color:var(--text-muted);width:96px}
+.calc-table td:last-child{text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+.calc-box{background:var(--bg);border-radius:12px;padding:16px;text-align:center}
+.calc-box .cf{font-size:12px;color:var(--text-muted);margin-bottom:10px}
+.calc-box .cs{font-size:13px;font-variant-numeric:tabular-nums;margin-bottom:5px}
+.calc-box .cr{font-size:22px;font-weight:800;letter-spacing:-.6px;margin-top:9px;color:var(--primary)}
 .check-row{display:flex;gap:9px;align-items:flex-start;background:var(--bg);border-radius:12px;padding:13px 15px;cursor:pointer;margin-bottom:14px}
 .check-row input{margin-top:2px;width:16px;height:16px;accent-color:var(--primary);flex-shrink:0}
 .check-row strong{display:block;font-size:13px;font-weight:700}
@@ -451,7 +461,7 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
         <th class="filt" data-f="grade" onclick="openHeadFilter(event,'grade')">등급 <span class="fi">▾</span></th>
         <th class="filt" data-f="category" onclick="openHeadFilter(event,'category')">구분 <span class="fi">▾</span></th>
         <th class="filt" data-f="assignedTo" onclick="openHeadFilter(event,'assignedTo')">배정 <span class="fi">▾</span></th>
-        <th>제품명</th><th>시리얼</th><th>주문일</th><th>종료일</th><th>금액</th><th>장부가액</th><th></th>
+        <th>제품명</th><th>시리얼</th><th>주문일</th><th>종료일</th><th>금액</th><th>예상 매각가</th><th></th>
       </tr></thead><tbody id="sub-table"></tbody></table></div>
       <div id="head-filter-menu" class="head-menu"></div>
     </div>
@@ -472,7 +482,29 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
 
     <div class="card">
       <div class="card-header">
-        <div class="card-title">감가상각</div>
+        <div class="card-title">예상 매각가</div>
+        <div style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text-muted)">
+          연 하락률
+          <input type="number" id="decline-rate" min="0" max="95" style="width:56px;padding:6px 8px;border:1px solid var(--border-strong);border-radius:9px;font-size:12px;font-family:inherit;text-align:right" onchange="setDeclineRate(this.value)">
+          %
+        </div>
+      </div>
+      <div class="hint-inline">
+        지금 팔면 얼마 받을지에 대한 추정입니다. 아래 회계용 장부가액과는 다른 값이에요.<br>
+        <strong>취득가 × (1 − 연하락률)<sup>경과년수</sup></strong> — 중고 기기는 초반에 크게 떨어지고 뒤로 갈수록 완만해져서 정률법을 씁니다.
+        취득가가 있는 <strong>구매 항목만</strong> 계산합니다.
+      </div>
+      <div class="grid-3" style="margin-bottom:16px">
+        <div class="stat-card"><div class="sl">대상 자산</div><div class="sv" id="resale-count">—</div><div class="sd">건</div></div>
+        <div class="stat-card"><div class="sl">총 취득가</div><div class="sv" id="resale-cost">—</div><div class="sd">원</div></div>
+        <div class="stat-card"><div class="sl">지금 팔면</div><div class="sv" id="resale-total">—</div><div class="sd">원 (추정)</div></div>
+      </div>
+      <div class="table-wrap" style="margin-bottom:26px"><table><thead><tr><th>구매처</th><th>제품명</th><th>취득일</th><th>취득가</th><th>경과</th><th>잔존율</th><th>예상 매각가</th></tr></thead><tbody id="resale-table"></tbody></table></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">감가상각 (회계용)</div>
         <div style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text-muted)">
           내용연수
           <input type="number" id="useful-life" min="1" max="20" style="width:56px;padding:6px 8px;border:1px solid var(--border-strong);border-radius:9px;font-size:12px;font-family:inherit;text-align:right" onchange="setUsefulLife(this.value)">
@@ -635,6 +667,15 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
       <div class="form-group"><label class="form-label">스펙</label><input class="form-control" id="sub-specs" placeholder="예: M5 Pro, 24GB, 1TB, 14인치"></div>
     </div>
     <div class="form-actions"><button class="btn btn-ghost" onclick="closeModal('modal-add-sub')">취소</button><button class="btn btn-primary" onclick="saveSubscription()">저장</button></div>
+  </div>
+</div>
+
+<!-- 예상 매각가 설명 -->
+<div class="modal-overlay" id="modal-resale">
+  <div class="modal" style="width:460px">
+    <div class="modal-header"><div class="modal-title">예상 매각가</div><button class="modal-close" onclick="closeModal('modal-resale')">×</button></div>
+    <div id="resale-body"></div>
+    <div class="form-actions"><button class="btn btn-primary" onclick="closeModal('modal-resale')">닫기</button></div>
   </div>
 </div>
 
@@ -864,6 +905,27 @@ function grades()      { return (db.settings&&db.settings.grades)||DEFAULT_GRADE
 // 내용연수는 자산 분류·회사 신고값에 따라 달라져 설정에서 바꾼다(기구·비품은 통상 4~6년).
 const DEFAULT_USEFUL_LIFE=5;
 function usefulLife(){ return Number(db.settings&&db.settings.usefulLifeYears)||DEFAULT_USEFUL_LIFE; }
+
+// ── 예상 매각가 ──────────────────────────────────────
+// 회계상 장부가액(정액법)과는 다른 값이다. 중고 노트북은 초반에 크게 떨어지고
+// 뒤로 갈수록 완만해져서, 매달 같은 금액을 빼는 정액법으로는 실제 시세가 안 맞는다.
+// (실제 견적: M1 에어 5.8년 경과에 21만 — 정액법 5년이면 이미 0원이어야 한다)
+// 그래서 매년 일정 비율씩 남기는 정률법을 쓴다.
+const DEFAULT_DECLINE_RATE=30; // 연 하락률 %
+function declineRate(){
+  const v=db.settings&&db.settings.declineRatePct;
+  return v===undefined||v===null||v===''?DEFAULT_DECLINE_RATE:Number(v);
+}
+function resaleEstimate(s){
+  if(s.category!=='asset') return null;        // 구독은 취득가가 없어 추정하지 않는다
+  const price=Number(s.purchasePrice)||0;
+  if(!price||!s.orderDate) return null;
+  const months=monthsElapsed(s.orderDate,today());
+  const years=months/12;
+  const r=Math.max(0,Math.min(95,declineRate()))/100;
+  const value=price*Math.pow(1-r,years);
+  return {price,months,years,ratePct:declineRate(),value:Math.max(value,0)};
+}
 // 구매는 기본 상각 대상, 구독은 제외. 다만 계약이 소유권 이전형이면 항목별로 켤 수 있다.
 function isDepreciable(s){ return s.depreciate===undefined ? s.category==='asset' : !!s.depreciate; }
 function monthsElapsed(from,to){
@@ -1442,11 +1504,11 @@ function renderSubscriptions(){
       <td class="date">${s.orderDate||'—'}</td>
       <td class="date">${s.endDate?`${s.endDate}${dueBadge}`:'<span style="color:var(--text-muted)">무기한</span>'}</td>
       <td class="amt">${amtVal?fmtPrice(amtVal):'<span style="color:var(--text-muted)">—</span>'}</td>
-      ${(()=>{const d=depreciation(s);
-        if(!d) return '<td class="amt"><span style="color:var(--text-muted)">—</span></td>';
-        return `<td class="amt" title="취득 ${fmtPrice(d.price)} · ${d.used}/${d.totalMonths}개월 경과 · 누적 ${fmtPrice(Math.round(d.accumulated))}">
-          <div>${fmtPrice(Math.round(d.book))}</div>
-          <div style="font-size:10px;color:var(--text-muted)">${d.done?'상각 완료':`${d.used}/${d.totalMonths}개월`}</div></td>`;})()}
+      ${(()=>{const r=resaleEstimate(s);
+        if(!r) return `<td class="amt"><span style="color:var(--text-muted)">${s.category==='asset'?'구매가 필요':'—'}</span></td>`;
+        return `<td class="amt">
+          <div>${fmtPrice(Math.round(r.value))}</div>
+          <button class="more-btn" onclick="showResaleDetail('${s.id}')">더보기</button></td>`;})()}
       <td><div class="actions-cell">
         <button class="btn btn-ghost btn-sm" onclick="editSub('${s.id}')">상세</button>
         <button class="btn btn-danger btn-sm" onclick="deleteSub('${s.id}')">삭제</button>
@@ -1643,6 +1705,33 @@ function saveSubscription(){
   renderSubscriptions();
   if(currentPage==='dashboard') renderDashboard();
 }
+// ── 예상 매각가 설명 ─────────────────────────────────
+function showResaleDetail(id){
+  const s=db.subscriptions.find(x=>x.id===id); if(!s) return;
+  const r=resaleEstimate(s); if(!r) return;
+  const y=Math.floor(r.months/12), m=r.months%12;
+  const keep=Math.pow(1-r.ratePct/100,r.years);
+  document.getElementById('resale-body').innerHTML=`
+    <div style="font-size:15px;font-weight:700;margin-bottom:14px">${subLabel(s)}</div>
+    <table class="calc-table">
+      <tr><td>취득가</td><td>${fmtPrice(r.price)}</td></tr>
+      <tr><td>취득일</td><td>${s.orderDate}</td></tr>
+      <tr><td>경과</td><td>${y?y+'년 ':''}${m}개월 <span style="color:var(--text-muted)">(${r.months}개월)</span></td></tr>
+      <tr><td>연 하락률</td><td>${r.ratePct}%</td></tr>
+    </table>
+    <div class="calc-box">
+      <div class="cf">취득가 × (1 − 연하락률) <sup>경과년수</sup></div>
+      <div class="cs">${r.price.toLocaleString()} × (1 − ${(r.ratePct/100).toFixed(2)})<sup>${r.years.toFixed(2)}</sup></div>
+      <div class="cs">${r.price.toLocaleString()} × ${keep.toFixed(4)}</div>
+      <div class="cr">= ${fmtPrice(Math.round(r.value))}</div>
+    </div>
+    <div class="hint-inline" style="margin:14px 0 0">
+      중고 시세는 모델·상태·시기에 따라 크게 달라집니다. 실제 견적과 <strong>±30% 이상 차이</strong>가 날 수 있어 참고용으로만 쓰세요.<br>
+      하락률은 비용 관리 페이지에서 조정할 수 있습니다. 실제 매각가와 계속 어긋나면 그 값을 손보시면 됩니다.
+    </div>`;
+  openModal('modal-resale');
+}
+
 // ── 감가상각 화면 ────────────────────────────────────
 function setUsefulLife(v){
   const y=Math.max(1,Math.min(20,Number(v)||DEFAULT_USEFUL_LIFE));
@@ -1654,7 +1743,40 @@ function setUsefulLife(v){
   renderCosts();
   if(currentPage==='subscriptions') renderSubscriptions();
 }
+function setDeclineRate(v){
+  const r=Math.max(0,Math.min(95,Number(v)||0));
+  const prev=declineRate();
+  if(r===prev){ renderCosts(); return; }
+  db.settings.declineRatePct=r;
+  saveDB();
+  addHistory('edit','예상 매각가 하락률 변경',`연 ${prev}% → ${r}%`);
+  renderCosts();
+  if(currentPage==='subscriptions') renderSubscriptions();
+}
+function renderResale(){
+  document.getElementById('decline-rate').value=declineRate();
+  const rows=db.subscriptions.map(s=>({s,r:resaleEstimate(s)})).filter(x=>x.r)
+    .sort((a,b)=>b.r.value-a.r.value);
+  const cost=rows.reduce((a,x)=>a+x.r.price,0);
+  const now=rows.reduce((a,x)=>a+x.r.value,0);
+  document.getElementById('resale-count').textContent=rows.length;
+  document.getElementById('resale-cost').textContent=Math.round(cost).toLocaleString();
+  document.getElementById('resale-total').textContent=Math.round(now).toLocaleString();
+  document.getElementById('resale-table').innerHTML=rows.map(({s,r})=>{
+    const y=Math.floor(r.months/12), m=r.months%12;
+    return `<tr>
+      <td><span class="badge badge-primary">${s.vendor}</span></td>
+      <td>${subLabel(s)}</td>
+      <td class="date">${s.orderDate}</td>
+      <td class="amt">${fmtPrice(r.price)}</td>
+      <td>${y?y+'년 ':''}${m}개월</td>
+      <td class="amt">${(r.value/r.price*100).toFixed(1)}%</td>
+      <td class="amt"><strong>${fmtPrice(Math.round(r.value))}</strong></td>
+    </tr>`;}).join('')
+    ||'<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:20px">구매 항목에 취득가와 주문일을 넣으면 여기에 나옵니다. 구독은 취득가가 없어 계산하지 않습니다.</td></tr>';
+}
 function renderDepreciation(){
+  renderResale();
   document.getElementById('useful-life').value=usefulLife();
   const rows=db.subscriptions.map(s=>({s,d:depreciation(s)})).filter(x=>x.d)
     .sort((a,b)=>b.d.book-a.d.book);
