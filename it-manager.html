@@ -152,8 +152,10 @@ td.editable .placeholder{color:#c4c8d0}
 #page-subscriptions thead th.filt:hover .fi{color:var(--primary)}
 #page-subscriptions thead th.filt.on{color:var(--primary);background:var(--primary-light)}
 #page-subscriptions thead th.filt.on .fi{color:var(--primary)}
-.head-menu{display:none;position:absolute;z-index:200;background:var(--surface);border:1px solid var(--border);
-  border-radius:9px;box-shadow:0 12px 32px rgba(0,0,0,.14);padding:5px;min-width:170px;max-height:300px;overflow-y:auto}
+/* absolute로 두면 위치 기준이 되는 조상이 없어 엉뚱한 곳에 뜬다.
+   화면 좌표를 그대로 쓸 수 있게 fixed로 둔다. */
+.head-menu{display:none;position:fixed;z-index:200;background:var(--surface);border:1px solid var(--border);
+  border-radius:9px;box-shadow:0 12px 32px rgba(0,0,0,.14);padding:5px;min-width:170px;max-height:320px;overflow-y:auto}
 .head-menu.open{display:block}
 .head-menu button{display:flex;width:100%;align-items:center;justify-content:space-between;gap:10px;
   border:none;background:none;text-align:left;padding:7px 10px;border-radius:6px;font-size:12px;
@@ -1235,11 +1237,15 @@ function openHeadFilter(ev,field){
   menu.innerHTML=
     `<button class="${cur?'':'sel'}" onclick="setHeadFilter('${field}','')">전체 <span class="n">${base.length}</span></button><hr>`
     +keys.map(k=>`<button class="${cur===k?'sel':''}" onclick="setHeadFilter('${field}',${JSON.stringify(k)})">${headValueLabel(field,k)} <span class="n">${counts[k]}</span></button>`).join('');
-  const th=ev.currentTarget.getBoundingClientRect();
-  const host=document.getElementById('page-subscriptions').getBoundingClientRect();
-  menu.style.left=(th.left-host.left)+'px';
-  menu.style.top=(th.bottom-host.top+4)+'px';
+  // fixed라 화면 좌표를 그대로 쓴다. 화면 밖으로 나가지 않게 가장자리에서 접어 넣는다.
   menu.classList.add('open');
+  const th=ev.currentTarget.getBoundingClientRect();
+  const w=menu.offsetWidth, h=menu.offsetHeight, pad=8;
+  let left=th.left, top=th.bottom+4;
+  if(left+w>window.innerWidth-pad) left=Math.max(pad,window.innerWidth-w-pad);
+  if(top+h>window.innerHeight-pad) top=Math.max(pad,th.top-h-4); // 아래가 좁으면 위로
+  menu.style.left=left+'px';
+  menu.style.top=top+'px';
 }
 function setHeadFilter(field,value){
   headFilters[field]=value;
