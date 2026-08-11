@@ -106,6 +106,8 @@ tbody tr:hover{background:#fafafa}
 .list-head{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px}
 .chip-list{display:flex;flex-wrap:wrap;gap:5px;min-height:30px;margin-bottom:9px}
 .mng-chip{display:inline-flex;align-items:center;gap:5px;background:var(--bg);border:1px solid var(--border);border-radius:16px;padding:3px 5px 3px 10px;font-size:12px;white-space:nowrap}
+.mng-chip .nm{cursor:pointer;border-bottom:1px dashed transparent}
+.mng-chip:hover .nm{border-bottom-color:var(--text-muted)}
 .mng-chip .st{color:#f59e0b;font-size:10px}
 .mng-chip .cnt{color:var(--text-muted);font-size:10px}
 .mng-chip button{border:none;background:none;cursor:pointer;color:var(--text-muted);font-size:14px;line-height:1;padding:0 3px;border-radius:50%}
@@ -136,8 +138,31 @@ td.editable .placeholder{color:#c4c8d0}
 .grade-stars{color:#f59e0b;letter-spacing:.5px;font-size:11px}
 
 /* ── 표 가독성 ── */
+/* 열 폭이 좁아지면 '노 트 북', '배정 구 성원'처럼 글자가 세로로 쪼개진다.
+   셀·헤더를 모두 nowrap으로 두고 좁을 때는 표 자체를 가로 스크롤시킨다. */
 .badge,.chip{white-space:nowrap}
+#sub-table td,#page-subscriptions thead th{white-space:nowrap}
 #sub-table td{vertical-align:middle}
+#page-subscriptions table{min-width:1080px}
+
+/* ── 헤더 필터 ── */
+#page-subscriptions thead th.filt{cursor:pointer;user-select:none}
+#page-subscriptions thead th.filt:hover{color:var(--primary)}
+#page-subscriptions thead th.filt .fi{color:#c4c8d0;font-size:9px}
+#page-subscriptions thead th.filt:hover .fi{color:var(--primary)}
+#page-subscriptions thead th.filt.on{color:var(--primary);background:var(--primary-light)}
+#page-subscriptions thead th.filt.on .fi{color:var(--primary)}
+.head-menu{display:none;position:absolute;z-index:200;background:var(--surface);border:1px solid var(--border);
+  border-radius:9px;box-shadow:0 12px 32px rgba(0,0,0,.14);padding:5px;min-width:170px;max-height:300px;overflow-y:auto}
+.head-menu.open{display:block}
+.head-menu button{display:flex;width:100%;align-items:center;justify-content:space-between;gap:10px;
+  border:none;background:none;text-align:left;padding:7px 10px;border-radius:6px;font-size:12px;
+  font-family:inherit;color:var(--text);cursor:pointer;white-space:nowrap}
+.head-menu button:hover{background:var(--bg)}
+.head-menu button.sel{background:var(--primary-light);color:var(--primary);font-weight:700}
+.head-menu button .n{color:var(--text-muted);font-size:11px}
+.head-menu button.sel .n{color:var(--primary)}
+.head-menu hr{border:none;border-top:1px solid var(--border);margin:4px 0}
 #sub-table .prod{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px}
 #sub-table .spec{font-size:10px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px}
 #sub-table .serial{font-family:monospace;font-size:11px;color:var(--text-muted);white-space:nowrap}
@@ -395,13 +420,19 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
     </div>
     <div class="card" style="padding:0">
       <div class="toolbar" style="padding:12px 14px 0">
-        <div class="search-wrap"><input type="text" id="sub-search" placeholder="구매처·유형 검색…" oninput="renderSubscriptions()"></div>
-        <select class="filter-sel" id="sub-vendor-filter" onchange="renderSubscriptions()"><option value="">전체 구매처</option></select>
-        <select class="filter-sel" id="sub-type-filter" onchange="renderSubscriptions()"><option value="">전체 유형</option></select>
-        <select class="filter-sel" id="sub-grade-filter" onchange="renderSubscriptions()"><option value="">전체 등급</option></select>
+        <div class="search-wrap"><input type="text" id="sub-search" placeholder="구매처·제품명·시리얼 검색…" oninput="renderSubscriptions()"></div>
+        <button class="btn btn-ghost btn-sm" id="clear-filters" onclick="clearHeadFilters()" style="display:none">필터 해제</button>
       </div>
-      <div class="hint-inline">💡 유형·등급·배정·종료일·금액은 표에서 바로 고칠 수 있습니다. 수정하면 이력에 기록됩니다.</div>
-      <div class="table-wrap"><table><thead><tr><th>구매처</th><th>유형</th><th>등급</th><th>구분</th><th>배정 구성원</th><th>제품명</th><th>시리얼</th><th>주문일</th><th>종료일</th><th>금액</th><th></th></tr></thead><tbody id="sub-table"></tbody></table></div>
+      <div class="hint-inline">💡 회색 ▾ 가 붙은 열은 눌러서 걸러볼 수 있습니다. 배정 구성원은 셀을 눌러 바로 바꿀 수 있고, 수정하면 이력에 남습니다.</div>
+      <div class="table-wrap"><table><thead><tr>
+        <th class="filt" data-f="vendor" onclick="openHeadFilter(event,'vendor')">구매처 <span class="fi">▾</span></th>
+        <th class="filt" data-f="deviceType" onclick="openHeadFilter(event,'deviceType')">유형 <span class="fi">▾</span></th>
+        <th class="filt" data-f="grade" onclick="openHeadFilter(event,'grade')">등급 <span class="fi">▾</span></th>
+        <th class="filt" data-f="category" onclick="openHeadFilter(event,'category')">구분 <span class="fi">▾</span></th>
+        <th class="filt" data-f="assignedTo" onclick="openHeadFilter(event,'assignedTo')">배정 <span class="fi">▾</span></th>
+        <th>제품명</th><th>시리얼</th><th>주문일</th><th>종료일</th><th>금액</th><th></th>
+      </tr></thead><tbody id="sub-table"></tbody></table></div>
+      <div id="head-filter-menu" class="head-menu"></div>
     </div>
   </div>
 
@@ -1171,31 +1202,88 @@ function subTab(tab,el){
   el.classList.add('active');
   renderSubscriptions();
 }
+// ── 헤더 필터 ────────────────────────────────────────
+// 열 제목을 눌러 값을 고르면 그 값만 남는다. 빈 문자열이면 전체.
+const headFilters={vendor:'',deviceType:'',grade:'',category:'',assignedTo:''};
+const HEAD_FIELD_LABEL={vendor:'구매처',deviceType:'유형',grade:'등급',category:'구분',assignedTo:'배정'};
+// 목록에 없는 값(미지정·재고)을 빈 문자열과 구분하기 위한 표식
+const NONE=' none';
+function headValue(s,field){
+  if(field==='assignedTo') return s.assignedTo||NONE;
+  if(field==='grade') return s.grade||NONE;
+  if(field==='deviceType') return s.deviceType||NONE;
+  return s[field]||NONE;
+}
+function headValueLabel(field,v){
+  if(v===NONE) return field==='assignedTo'?'재고':'미지정';
+  if(field==='assignedTo') return empNameOf(v)||'?';
+  if(field==='category') return v==='subscription'?'구독':'구매';
+  if(field==='grade') return gradeLabel(v);
+  return v;
+}
+function openHeadFilter(ev,field){
+  ev.stopPropagation();
+  const menu=document.getElementById('head-filter-menu');
+  if(menu.classList.contains('open')&&menu.dataset.field===field){ menu.classList.remove('open'); return; }
+  menu.dataset.field=field;
+  // 다른 필터가 걸린 상태에서 고를 수 있는 값과 건수를 보여준다
+  const base=applyHeadFilters(db.subscriptions,field);
+  const counts={};
+  base.forEach(s=>{const v=headValue(s,field);counts[v]=(counts[v]||0)+1;});
+  const keys=Object.keys(counts).sort((a,b)=>a===NONE?1:b===NONE?-1:headValueLabel(field,a).localeCompare(headValueLabel(field,b)));
+  const cur=headFilters[field];
+  menu.innerHTML=
+    `<button class="${cur?'':'sel'}" onclick="setHeadFilter('${field}','')">전체 <span class="n">${base.length}</span></button><hr>`
+    +keys.map(k=>`<button class="${cur===k?'sel':''}" onclick="setHeadFilter('${field}',${JSON.stringify(k)})">${headValueLabel(field,k)} <span class="n">${counts[k]}</span></button>`).join('');
+  const th=ev.currentTarget.getBoundingClientRect();
+  const host=document.getElementById('page-subscriptions').getBoundingClientRect();
+  menu.style.left=(th.left-host.left)+'px';
+  menu.style.top=(th.bottom-host.top+4)+'px';
+  menu.classList.add('open');
+}
+function setHeadFilter(field,value){
+  headFilters[field]=value;
+  document.getElementById('head-filter-menu').classList.remove('open');
+  renderSubscriptions();
+}
+function clearHeadFilters(){
+  Object.keys(headFilters).forEach(k=>headFilters[k]='');
+  renderSubscriptions();
+}
+// except를 주면 그 열만 빼고 적용한다 (메뉴에 고를 값이 남아 있게 하려고)
+function applyHeadFilters(list,except){
+  Object.keys(headFilters).forEach(f=>{
+    if(f===except||!headFilters[f]) return;
+    list=list.filter(s=>headValue(s,f)===headFilters[f]);
+  });
+  return list;
+}
+document.addEventListener('click',()=>{
+  const m=document.getElementById('head-filter-menu');
+  if(m) m.classList.remove('open');
+});
+
 function renderSubscriptions(){
   const q=(document.getElementById('sub-search')?.value||'').toLowerCase();
-  const vf=document.getElementById('sub-vendor-filter')?.value||'';
-  const tf=document.getElementById('sub-type-filter')?.value||'';
-  const gf=document.getElementById('sub-grade-filter')?.value||'';
-  const vendors=[...new Set(db.subscriptions.map(s=>s.vendor))].sort();
-  const types=[...new Set(db.subscriptions.map(s=>s.deviceType).filter(Boolean))].sort();
-  const vsel=document.getElementById('sub-vendor-filter');
-  const tsel=document.getElementById('sub-type-filter');
-  const gsel=document.getElementById('sub-grade-filter');
-  const curV=vsel.value, curT=tsel.value, curG=gsel.value;
-  vsel.innerHTML='<option value="">전체 구매처</option>'+vendors.map(v=>`<option ${v===curV?'selected':''}>${v}</option>`).join('');
-  tsel.innerHTML='<option value="">전체 유형</option>'+types.map(t=>`<option ${t===curT?'selected':''}>${t}</option>`).join('');
-  gsel.innerHTML='<option value="">전체 등급</option><option value="__none__"'+(curG==='__none__'?' selected':'')+'>미지정</option>'
-    +grades().map(g=>`<option value="${g.key}" ${g.key===curG?'selected':''}>${gradeLabel(g.key)}</option>`).join('');
   let list=db.subscriptions;
   if(subCurrentTab==='subscription') list=list.filter(s=>s.category==='subscription');
   if(subCurrentTab==='asset') list=list.filter(s=>s.category==='asset');
   if(subCurrentTab==='unassigned') list=list.filter(s=>!s.assignedTo);
   if(q) list=list.filter(s=>[s.vendor,s.deviceType,s.grade,s.productName,s.serialNo].some(f=>(f||'').toLowerCase().includes(q)));
-  if(vf) list=list.filter(s=>s.vendor===vf);
-  if(tf) list=list.filter(s=>s.deviceType===tf);
-  if(gf) list=list.filter(s=>gf==='__none__'?!s.grade:s.grade===gf);
+  list=applyHeadFilters(list);
+
+  // 걸린 필터를 헤더에 표시하고, 하나라도 있으면 해제 버튼을 띄운다
+  let anyFilter=false;
+  document.querySelectorAll('#page-subscriptions thead th.filt').forEach(th=>{
+    const f=th.dataset.f, v=headFilters[f];
+    th.classList.toggle('on',!!v);
+    th.innerHTML=(v?`${HEAD_FIELD_LABEL[f]}: ${headValueLabel(f,v)}`:HEAD_FIELD_LABEL[f])+' <span class="fi">▾</span>';
+    if(v) anyFilter=true;
+  });
+  document.getElementById('clear-filters').style.display=anyFilter?'':'none';
+
   const tbody=document.getElementById('sub-table');
-  if(!list.length){tbody.innerHTML=`<tr><td colspan="11"><div class="empty"><div class="ei">📋</div><div class="et">항목 없음</div></div></td></tr>`;return;}
+  if(!list.length){tbody.innerHTML=`<tr><td colspan="11"><div class="empty"><div class="ei">📋</div><div class="et">항목 없음</div><div class="ed">${anyFilter?'필터를 해제해보세요':''}</div></div></td></tr>`;return;}
   tbody.innerHTML=list.map(s=>{
     const dl=daysLeft(s.endDate);
     const dueBadge=s.endDate?` <span class="badge ${dl<=0?'badge-expired':dl<=30?'badge-expiring':dl<=90?'badge-warn':'badge-ok'}">${dl<=0?'만료':dl+'일'}</span>`:'';
@@ -1499,17 +1587,71 @@ function renderManageLists(){
     if(s.deviceType) useT[s.deviceType]=(useT[s.deviceType]||0)+1;
     if(s.grade) useG[s.grade]=(useG[s.grade]||0)+1;
   });
-  const chip=(label,extra,count,onDel)=>
-    `<span class="mng-chip">${label}${extra}${count?`<span class="cnt">${count}</span>`:''}<button title="삭제" onclick="${onDel}">×</button></span>`;
+  // 이름을 누르면 그 자리에서 고칠 수 있다. 바꾸면 그 값을 쓰던 항목이 전부 따라 바뀐다.
+  const chip=(kind,key,label,extra,count)=>
+    `<span class="mng-chip"><span class="nm" title="눌러서 이름 변경" onclick='startRename(this,${JSON.stringify(kind)},${JSON.stringify(key)})'>${label}</span>${extra}${count?`<span class="cnt">${count}</span>`:''}<button title="삭제" onclick='delListItem(${JSON.stringify(kind)},${JSON.stringify(key)})'>×</button></span>`;
+  const empty='<span style="font-size:11px;color:var(--text-muted)">없음</span>';
   document.getElementById('mng-vendors').innerHTML=
-    db.vendors.map(v=>chip(v.name,'',useV[v.name]||0,`delVendorItem('${v.id}')`)).join('')
-    ||'<span style="font-size:11px;color:var(--text-muted)">없음</span>';
+    db.vendors.map(v=>chip('vendor',v.name,v.name,'',useV[v.name]||0)).join('')||empty;
   document.getElementById('mng-types').innerHTML=
-    deviceTypes().map(t=>chip(t,'',useT[t]||0,`delTypeItem('${t.replace(/'/g,"\\'")}')`)).join('')
-    ||'<span style="font-size:11px;color:var(--text-muted)">없음</span>';
+    deviceTypes().map(t=>chip('type',t,t,'',useT[t]||0)).join('')||empty;
   document.getElementById('mng-grades').innerHTML=
-    grades().map(g=>chip(g.key,g.stars?` <span class="st">${'★'.repeat(g.stars)}</span>`:'',useG[g.key]||0,`delGradeItem('${g.key.replace(/'/g,"\\'")}')`)).join('')
-    ||'<span style="font-size:11px;color:var(--text-muted)">없음</span>';
+    grades().map(g=>chip('grade',g.key,g.key,g.stars?` <span class="st">${'★'.repeat(g.stars)}</span>`:'',useG[g.key]||0)).join('')||empty;
+}
+
+const KIND_LABEL={vendor:'구매처',type:'장비 유형',grade:'등급'};
+const KIND_FIELD={vendor:'vendor',type:'deviceType',grade:'grade'};
+function usedCount(kind,key){ return db.subscriptions.filter(s=>s[KIND_FIELD[kind]]===key).length; }
+function listKeys(kind){
+  if(kind==='vendor') return db.vendors.map(v=>v.name);
+  if(kind==='type')   return deviceTypes();
+  return grades().map(g=>g.key);
+}
+function startRename(el,kind,key){
+  if(el.querySelector('input')) return;
+  const input=document.createElement('input');
+  input.className='inline-edit'; input.style.maxWidth='120px'; input.value=key;
+  el.innerHTML=''; el.appendChild(input);
+  input.focus(); input.select();
+  let done=false;
+  const finish=commit=>{
+    if(done) return; done=true;
+    if(commit) applyRename(kind,key,input.value.trim()); else renderVendors();
+  };
+  input.addEventListener('blur',()=>finish(true));
+  input.addEventListener('keydown',ev=>{
+    if(ev.key==='Enter') finish(true);
+    if(ev.key==='Escape') finish(false);
+  });
+}
+// 노션처럼 — 목록의 이름을 바꾸면 그 값을 쓰던 기존 항목이 전부 새 이름으로 따라온다.
+function applyRename(kind,oldKey,newKey){
+  if(!newKey||newKey===oldKey){ renderVendors(); return; }
+  if(listKeys(kind).includes(newKey)){ alert(`이미 있는 ${KIND_LABEL[kind]}입니다.`); renderVendors(); return; }
+  const field=KIND_FIELD[kind];
+  if(kind==='vendor'){ const v=db.vendors.find(x=>x.name===oldKey); if(v) v.name=newKey; }
+  else if(kind==='type'){ db.settings.deviceTypes=db.settings.deviceTypes.map(t=>t===oldKey?newKey:t); }
+  else { const g=db.settings.grades.find(x=>x.key===oldKey); if(g) g.key=newKey; }
+  let n=0;
+  db.subscriptions.forEach(s=>{ if(s[field]===oldKey){ s[field]=newKey; n++; } });
+  if(headFilters[field]===oldKey) headFilters[field]=newKey; // 필터가 걸려 있었다면 같이 따라간다
+  saveDB();
+  addHistory('edit',`${KIND_LABEL[kind]} 이름 변경: ${oldKey} → ${newKey}`,n?`기존 ${n}건 일괄 반영`:'사용 중인 항목 없음');
+  renderVendors();
+}
+function delListItem(kind,key){
+  const n=usedCount(kind,key);
+  showConfirm('🗑️',`${KIND_LABEL[kind]} 삭제`,
+    n?`"${key}"을(를) 쓰는 항목이 ${n}건 있습니다. 목록에서만 지우고 기존 항목의 값은 그대로 남습니다. 진행할까요?`
+     :`"${key}"을(를) 삭제할까요?`,
+    ()=>{
+      if(kind==='vendor')    db.vendors=db.vendors.filter(v=>v.name!==key);
+      else if(kind==='type') db.settings.deviceTypes=db.settings.deviceTypes.filter(t=>t!==key);
+      else                   db.settings.grades=db.settings.grades.filter(g=>g.key!==key);
+      saveDB();
+      addHistory('del',`${KIND_LABEL[kind]} 삭제: ${key}`,n?`사용 중 ${n}건`:'');
+      renderVendors();
+    });
 }
 function addVendorItem(){
   const el=document.getElementById('mng-vendor-input'), name=el.value.trim();
@@ -1518,27 +1660,12 @@ function addVendorItem(){
   db.vendors.push({id:uid(),name,url:'',memo:''});
   saveDB(); addHistory('add',`구매처 추가: ${name}`,''); el.value=''; renderVendors();
 }
-function delVendorItem(id){
-  const v=db.vendors.find(x=>x.id===id); if(!v) return;
-  const n=db.subscriptions.filter(s=>s.vendor===v.name).length;
-  showConfirm('🗑️','구매처 삭제',
-    n?`"${v.name}"을(를) 쓰는 항목이 ${n}건 있습니다. 목록에서만 지우고 기존 항목의 구매처 값은 그대로 남습니다. 진행할까요?`
-     :`"${v.name}"을(를) 삭제할까요?`,
-    ()=>{ db.vendors=db.vendors.filter(x=>x.id!==id); saveDB(); addHistory('del',`구매처 삭제: ${v.name}`,n?`사용 중 ${n}건`:''); renderVendors(); });
-}
 function addTypeItem(){
   const el=document.getElementById('mng-type-input'), t=el.value.trim();
   if(!t) return;
   if(db.settings.deviceTypes.includes(t)){alert('이미 있는 유형입니다.');return;}
   db.settings.deviceTypes.push(t);
   saveDB(); addHistory('add',`장비 유형 추가: ${t}`,''); el.value=''; renderVendors();
-}
-function delTypeItem(t){
-  const n=db.subscriptions.filter(s=>s.deviceType===t).length;
-  showConfirm('🗑️','장비 유형 삭제',
-    n?`"${t}"을(를) 쓰는 항목이 ${n}건 있습니다. 목록에서만 지우고 기존 항목의 값은 그대로 남습니다. 진행할까요?`
-     :`"${t}"을(를) 삭제할까요?`,
-    ()=>{ db.settings.deviceTypes=db.settings.deviceTypes.filter(x=>x!==t); saveDB(); addHistory('del',`장비 유형 삭제: ${t}`,n?`사용 중 ${n}건`:''); renderVendors(); });
 }
 function addGradeItem(){
   const el=document.getElementById('mng-grade-input'), k=el.value.trim();
@@ -1554,13 +1681,6 @@ function addGradeItem(){
     saveDB(); addHistory('add',`등급 추가: ${k}`,`별점 ${stars}`);
   }
   el.value=''; document.getElementById('mng-grade-stars').value=0; renderVendors();
-}
-function delGradeItem(k){
-  const n=db.subscriptions.filter(s=>s.grade===k).length;
-  showConfirm('🗑️','등급 삭제',
-    n?`"${k}" 등급인 항목이 ${n}건 있습니다. 목록에서만 지우고 기존 항목의 값은 그대로 남습니다. 진행할까요?`
-     :`"${k}"을(를) 삭제할까요?`,
-    ()=>{ db.settings.grades=db.settings.grades.filter(g=>g.key!==k); saveDB(); addHistory('del',`등급 삭제: ${k}`,n?`사용 중 ${n}건`:''); renderVendors(); });
 }
 
 function saveVendor(){
