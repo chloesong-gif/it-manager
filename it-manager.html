@@ -89,6 +89,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Pretendard','Segoe UI',sans-s
 .alert-list{margin-bottom:18px;display:flex;flex-direction:column;gap:7px}
 .alert{display:flex;align-items:center;gap:10px;padding:10px 13px;border-radius:8px;font-size:13px}
 .alert-warn{background:var(--warning-light);color:#78350f;border:1px solid #fde68a}
+.alert-ok{background:var(--success-light);color:#065f46;border:1px solid #6ee7b7}
 .alert-danger{background:var(--danger-light);color:#7f1d1d;border:1px solid #fca5a5}
 .alert .at{font-weight:700;min-width:56px}
 
@@ -412,7 +413,11 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
   <div id="page-subscriptions" class="page active">
     <div class="page-header">
       <div class="page-title">구독·자산 관리</div>
-      <button class="btn btn-primary" onclick="openAddSub()">＋ 추가</button>
+      <div style="display:flex;gap:7px">
+        <button class="btn btn-ghost" onclick="exportCsv()">⬇ 내보내기</button>
+        <button class="btn btn-ghost" onclick="openImport()">⬆ 가져오기</button>
+        <button class="btn btn-primary" onclick="openAddSub()">＋ 추가</button>
+      </div>
     </div>
     <div class="inner-tabs">
       <button class="inner-tab active" onclick="subTab('all',this)">전체</button>
@@ -591,6 +596,31 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
       <div class="form-group"><label class="form-label">스펙</label><input class="form-control" id="sub-specs" placeholder="예: M5 Pro, 24GB, 1TB, 14인치"></div>
     </div>
     <div class="form-actions"><button class="btn btn-ghost" onclick="closeModal('modal-add-sub')">취소</button><button class="btn btn-primary" onclick="saveSubscription()">저장</button></div>
+  </div>
+</div>
+
+<!-- Import -->
+<div class="modal-overlay" id="modal-import">
+  <div class="modal" style="width:760px;max-width:96vw">
+    <div class="modal-header"><div class="modal-title">⬆ 엑셀 가져오기</div><button class="modal-close" onclick="closeModal('modal-import')">×</button></div>
+    <div class="hint-inline">
+      구글 시트·엑셀에서 <strong>범위를 복사해 아래에 붙여넣거나</strong>, CSV 파일을 올리세요.<br>
+      <strong>시리얼 넘버가 같으면 기존 항목을 수정</strong>하고, 없으면 새로 추가합니다. 구매처·유형·등급·구성원은 없는 값이면 자동 등록됩니다.
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">CSV 파일</label><input class="form-control" type="file" id="import-file" accept=".csv,.txt,.tsv" onchange="readImportFile(this)"></div>
+      <div class="form-group"><label class="form-label">양식이 필요하면</label><button class="btn btn-ghost" style="width:100%" onclick="exportCsv()">현재 데이터 내보내기</button></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">또는 여기에 붙여넣기</label>
+      <textarea class="form-control" id="import-text" rows="6" placeholder="구매처	유형	등급	구분	배정	제품명	시리얼	…" style="font-family:monospace;font-size:11px;resize:vertical" oninput="previewImport()"></textarea>
+      <div class="form-hint">첫 줄에 제목(구매처·시리얼 등)이 있으면 알아서 열을 맞춥니다. 없으면 내보내기 양식 순서로 읽습니다.</div>
+    </div>
+    <div id="import-preview"></div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-import')">취소</button>
+      <button class="btn btn-primary" id="import-apply" onclick="applyImport()" disabled>가져오기</button>
+    </div>
   </div>
 </div>
 
@@ -1505,6 +1535,177 @@ function saveSubscription(){
   renderSubscriptions();
   if(currentPage==='dashboard') renderDashboard();
 }
+// ═══════════════════════════════════════════════════════
+// 엑셀 가져오기 / 내보내기
+// ═══════════════════════════════════════════════════════
+// 스펙에 "화이트, Ultra5, 16GB"처럼 쉼표가 들어가므로 따옴표를 제대로 처리해야 한다.
+// 엑셀에서 복사하면 탭 구분, CSV 파일이면 쉼표 구분이라 둘 다 받는다.
+const IMPORT_COLS=[
+  {key:'vendor',       head:'구매처'},
+  {key:'deviceType',   head:'유형'},
+  {key:'grade',        head:'등급'},
+  {key:'category',     head:'구분'},
+  {key:'assigned',     head:'배정'},
+  {key:'productName',  head:'제품명'},
+  {key:'serialNo',     head:'시리얼'},
+  {key:'manufacturer', head:'제조사'},
+  {key:'modelNo',      head:'모델번호'},
+  {key:'specs',        head:'스펙'},
+  {key:'orderDate',    head:'주문일'},
+  {key:'endDate',      head:'종료일'},
+  {key:'monthlyPrice', head:'월구독료'},
+  {key:'purchasePrice',head:'구매가'},
+  {key:'notes',        head:'메모'}
+];
+function parseDelimited(text){
+  const delim=text.split('\n')[0].includes('\t')?'\t':',';
+  const rows=[]; let row=[], cell='', q=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(q){
+      if(c==='"'){ if(text[i+1]==='"'){cell+='"';i++;} else q=false; }
+      else cell+=c;
+    } else if(c==='"') q=true;
+    else if(c===delim){ row.push(cell); cell=''; }
+    else if(c==='\n'){ row.push(cell); rows.push(row); row=[]; cell=''; }
+    else if(c!=='\r') cell+=c;
+  }
+  if(cell!==''||row.length){ row.push(cell); rows.push(row); }
+  return rows.filter(r=>r.some(c=>c.trim()!==''));
+}
+function normDate(v){
+  const s=(v||'').trim();
+  if(!s) return '';
+  let m=s.match(/^(\d{4})[-/.\s]?(\d{1,2})[-/.\s]?(\d{1,2})$/);
+  if(m) return `${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`;
+  return null; // 해석 실패 — 미리보기에서 경고로 알린다
+}
+function normNum(v){ return Number(String(v||'').replace(/[^0-9.-]/g,''))||0; }
+function normCategory(v){
+  const s=(v||'').trim();
+  if(/구매|자산|asset|매입/i.test(s)) return 'asset';
+  return 'subscription';
+}
+let importRows=null;
+function openImport(){
+  document.getElementById('import-text').value='';
+  document.getElementById('import-file').value='';
+  document.getElementById('import-preview').innerHTML='';
+  document.getElementById('import-apply').disabled=true;
+  importRows=null;
+  openModal('modal-import');
+}
+function readImportFile(input){
+  const f=input.files&&input.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{ document.getElementById('import-text').value=r.result; previewImport(); };
+  r.readAsText(f,'utf-8');
+}
+function previewImport(){
+  const text=document.getElementById('import-text').value;
+  const box=document.getElementById('import-preview');
+  const btn=document.getElementById('import-apply');
+  importRows=null; btn.disabled=true;
+  if(!text.trim()){ box.innerHTML=''; return; }
+  const rows=parseDelimited(text);
+  if(!rows.length){ box.innerHTML='<div class="alert alert-warn"><span>⚠️</span><div>읽을 내용이 없습니다.</div></div>'; return; }
+
+  // 첫 줄이 제목이면 열 이름으로 맞추고, 아니면 내보내기 순서를 따른다
+  const first=rows[0].map(c=>c.trim());
+  const isHead=first.some(c=>['구매처','시리얼','제품명','유형'].includes(c));
+  let map;
+  if(isHead){
+    map={};
+    first.forEach((h,i)=>{ const col=IMPORT_COLS.find(c=>c.head===h.replace(/\s/g,'')); if(col) map[col.key]=i; });
+  } else {
+    map={}; IMPORT_COLS.forEach((c,i)=>map[c.key]=i);
+  }
+  const body=isHead?rows.slice(1):rows;
+  const parsed=[], warns=[];
+  body.forEach((r,ri)=>{
+    const g=k=>map[k]===undefined?'':(r[map[k]]||'').trim();
+    const vendor=g('vendor'), serial=g('serialNo');
+    if(!vendor&&!serial&&!g('productName')) return; // 빈 줄
+    const od=normDate(g('orderDate')), ed=normDate(g('endDate'));
+    if(od===null) warns.push(`${ri+1}행: 주문일 "${g('orderDate')}" 형식을 못 읽었습니다`);
+    if(ed===null) warns.push(`${ri+1}행: 종료일 "${g('endDate')}" 형식을 못 읽었습니다`);
+    if(!vendor) warns.push(`${ri+1}행: 구매처가 비어 있습니다`);
+    const cat=normCategory(g('category'));
+    const exist=serial?db.subscriptions.find(s=>s.serialNo&&s.serialNo===serial):null;
+    parsed.push({
+      mode: exist?'수정':'신규', existId: exist?exist.id:null,
+      vendor, deviceType:g('deviceType'), grade:g('grade'), category:cat,
+      assignedName:g('assigned')==='재고'?'':g('assigned'),
+      productName:g('productName'), serialNo:serial, manufacturer:g('manufacturer'),
+      modelNo:g('modelNo'), specs:g('specs'),
+      orderDate:od||'', endDate:ed||'',
+      monthlyPrice:cat==='subscription'?normNum(g('monthlyPrice')):0,
+      purchasePrice:cat==='asset'?normNum(g('purchasePrice')):0,
+      notes:g('notes')
+    });
+  });
+  if(!parsed.length){ box.innerHTML='<div class="alert alert-warn"><span>⚠️</span><div>가져올 행이 없습니다.</div></div>'; return; }
+  importRows=parsed;
+  const add=parsed.filter(p=>p.mode==='신규').length, upd=parsed.length-add;
+  const noSerial=parsed.filter(p=>!p.serialNo).length;
+  box.innerHTML=
+    `<div class="alert ${warns.length?'alert-warn':'alert-ok'}" style="margin-bottom:9px">
+       <span>${warns.length?'⚠️':'✅'}</span>
+       <div><strong>${parsed.length}건</strong> — 신규 ${add}건, 기존 수정 ${upd}건${noSerial?` · 시리얼 없는 행 ${noSerial}건은 항상 신규로 추가됩니다`:''}</div>
+     </div>`
+    +(warns.length?`<div class="alert alert-warn" style="margin-bottom:9px;display:block"><div style="font-size:12px;line-height:1.7">${warns.slice(0,8).map(w=>'· '+w).join('<br>')}${warns.length>8?`<br>… 외 ${warns.length-8}건`:''}</div></div>`:'')
+    +`<div class="table-wrap" style="max-height:210px;overflow-y:auto"><table><thead><tr><th></th><th>구매처</th><th>유형</th><th>등급</th><th>구분</th><th>배정</th><th>제품명</th><th>시리얼</th><th>금액</th></tr></thead><tbody>`
+    +parsed.slice(0,30).map(p=>`<tr>
+        <td><span class="badge ${p.mode==='신규'?'badge-ok':'badge-primary'}">${p.mode}</span></td>
+        <td>${p.vendor||'—'}</td><td>${p.deviceType||'—'}</td><td>${p.grade||'미지정'}</td>
+        <td>${p.category==='subscription'?'구독':'구매'}</td><td>${p.assignedName||'재고'}</td>
+        <td>${p.productName||'—'}</td><td class="serial">${p.serialNo||'—'}</td>
+        <td class="amt">${fmtPrice(p.category==='subscription'?p.monthlyPrice:p.purchasePrice)}</td>
+      </tr>`).join('')
+    +`</tbody></table></div>${parsed.length>30?`<div class="form-hint">미리보기는 30건까지만 표시합니다. 전체 ${parsed.length}건이 반영됩니다.</div>`:''}`;
+  document.getElementById('import-apply').disabled=false;
+}
+function applyImport(){
+  if(!importRows||!importRows.length) return;
+  let add=0,upd=0;
+  importRows.forEach(p=>{
+    ensureVendor(p.vendor); ensureDeviceType(p.deviceType); ensureGrade(p.grade);
+    const assignedTo=ensureEmployee(p.assignedName);
+    const data={vendor:p.vendor,deviceType:p.deviceType,grade:p.grade,category:p.category,assignedTo,
+      orderDate:p.orderDate,endDate:p.endDate,monthlyPrice:p.monthlyPrice,purchasePrice:p.purchasePrice,
+      productName:p.productName,serialNo:p.serialNo,manufacturer:p.manufacturer,modelNo:p.modelNo,
+      specs:p.specs,notes:p.notes};
+    if(p.existId){
+      const i=db.subscriptions.findIndex(s=>s.id===p.existId);
+      db.subscriptions[i]={...db.subscriptions[i],...data}; upd++;
+    } else {
+      db.subscriptions.push({id:uid(),deviceName:'',...data}); add++;
+    }
+  });
+  saveDB();
+  addHistory('add','엑셀 가져오기',`신규 ${add}건, 수정 ${upd}건`);
+  closeModal('modal-import');
+  renderSubscriptions();
+  if(currentPage==='dashboard') renderDashboard();
+  alert(`가져오기 완료 — 신규 ${add}건, 수정 ${upd}건`);
+}
+function exportCsv(){
+  const esc=v=>{ const s=String(v??''); return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; };
+  const lines=[IMPORT_COLS.map(c=>c.head).join(',')];
+  db.subscriptions.forEach(s=>{
+    lines.push([s.vendor,s.deviceType,s.grade,s.category==='subscription'?'구독':'구매',
+      empNameOf(s.assignedTo)||'재고',s.productName,s.serialNo,s.manufacturer,s.modelNo,s.specs,
+      s.orderDate,s.endDate,s.monthlyPrice||'',s.purchasePrice||'',s.notes].map(esc).join(','));
+  });
+  // 엑셀이 한글을 깨뜨리지 않도록 BOM을 붙인다
+  const blob=new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`구독자산_${today()}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
 function deleteSub(id){
   const s=db.subscriptions.find(x=>x.id===id);
   showConfirm('🗑️',`삭제 확인`,`"${s.vendor} · ${subLabel(s)}"을 삭제하시겠습니까?`,()=>{
