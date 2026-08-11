@@ -7,16 +7,19 @@
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
+/* 사내 근태 대시보드(hr.whitecube.co.kr)와 같은 결로 맞춘 토스 계열 팔레트.
+   테두리는 거의 안 보이게, 그림자 대신 배경 대비로 층을 나눈다. */
 :root {
-  --bg:#f4f5f7;--surface:#fff;--border:#e5e7eb;--text:#111827;--text-muted:#6b7280;
-  --primary:#4f46e5;--primary-light:#eef2ff;--primary-hover:#4338ca;
-  --success:#059669;--success-light:#d1fae5;
-  --warning:#d97706;--warning-light:#fef3c7;
-  --danger:#dc2626;--danger-light:#fee2e2;
-  --sidebar:220px;--radius:10px;
+  --bg:#f9fafb;--surface:#fff;--border:#f2f4f6;--border-strong:#e5e8eb;
+  --text:#191f28;--text-muted:#8b95a1;
+  --primary:#3182f6;--primary-light:#eef4fe;--primary-hover:#1b64da;
+  --success:#00b26e;--success-light:#e7f9f1;
+  --warning:#ff9500;--warning-light:#fff5e6;
+  --danger:#f04452;--danger-light:#feecee;
+  --sidebar:220px;--radius:16px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Pretendard','Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+body{font-family:'Pretendard','Pretendard Variable',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;-webkit-font-smoothing:antialiased;letter-spacing:-.2px}
 
 /* ── Login / Setup screens ── */
 #screen-setup,#screen-login{display:none;min-height:100vh;align-items:center;justify-content:center;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%)}
@@ -28,7 +31,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Pretendard','Segoe UI',sans-s
 .auth-card .form-group{text-align:left;margin-bottom:14px}
 .auth-card .form-label{display:block;font-size:12px;font-weight:700;margin-bottom:5px}
 .auth-card .form-control{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:monospace}
-.auth-card .form-control:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(79,70,229,.1)}
+.auth-card .form-control:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(49,130,246,.12)}
 .auth-card .btn-full{width:100%;padding:11px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;border:none;background:var(--primary);color:#fff;margin-top:8px;transition:background .15s}
 .auth-card .btn-full:hover{background:var(--primary-hover)}
 .auth-card .hint{font-size:11px;color:var(--text-muted);margin-top:16px;line-height:1.7;background:#f9fafb;border-radius:8px;padding:12px;text-align:left}
@@ -41,16 +44,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Pretendard','Segoe UI',sans-s
 
 /* ── Sidebar ── */
 .sidebar{width:var(--sidebar);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:100}
-.sidebar-brand{padding:18px 16px 14px;border-bottom:1px solid var(--border)}
-.sidebar-brand .logo{font-size:14px;font-weight:800;color:var(--primary)}
-.sidebar-brand .sub{font-size:11px;color:var(--text-muted);margin-top:2px}
-.sidebar-nav{padding:8px 0;flex:1;overflow-y:auto}
-.nav-group-label{font-size:10px;font-weight:700;color:var(--text-muted);letter-spacing:.8px;text-transform:uppercase;padding:10px 16px 3px}
-.nav-item{display:flex;align-items:center;gap:9px;padding:9px 16px;cursor:pointer;color:var(--text-muted);font-size:13px;font-weight:500;transition:all .12s;border-left:3px solid transparent;user-select:none}
+.sidebar-brand{padding:22px 18px 16px}
+.sidebar-brand .logo{font-size:15px;font-weight:800;color:var(--text);letter-spacing:-.4px}
+.sidebar-brand .sub{font-size:11px;color:var(--text-muted);margin-top:3px}
+.sidebar-nav{padding:6px 10px;flex:1;overflow-y:auto}
+.nav-group-label{font-size:11px;font-weight:600;color:var(--text-muted);letter-spacing:0;padding:12px 8px 4px}
+.nav-item{display:flex;align-items:center;gap:9px;padding:9px 10px;margin-bottom:2px;border-radius:10px;cursor:pointer;color:var(--text-muted);font-size:13px;font-weight:600;transition:all .12s;user-select:none}
 .nav-item:hover{background:var(--bg);color:var(--text)}
-.nav-item.active{background:var(--primary-light);color:var(--primary);border-left-color:var(--primary);font-weight:600}
+.nav-item.active{background:var(--primary-light);color:var(--primary)}
 .nav-item .ni{font-size:15px;width:18px;text-align:center}
-.sidebar-user{padding:12px 16px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.sidebar-user{padding:14px 18px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px}
 .user-avatar{width:30px;height:30px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;overflow:hidden;flex-shrink:0}
 .user-avatar img{width:100%;height:100%;object-fit:cover}
 .user-info{flex:1;overflow:hidden}
@@ -60,53 +63,57 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Pretendard','Segoe UI',sans-s
 .btn-logout:hover{color:var(--danger)}
 
 /* ── Main ── */
-.main{margin-left:var(--sidebar);flex:1;padding:26px 30px;max-width:1200px}
+.main{margin-left:var(--sidebar);flex:1;padding:32px 36px;max-width:1240px}
 .page{display:none}
 .page.active{display:block}
 .page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}
-.page-title{font-size:20px;font-weight:800;letter-spacing:-.3px}
+.page-title{font-size:24px;font-weight:800;letter-spacing:-.7px}
 .page-title span{color:var(--text-muted);font-weight:500;font-size:13px;margin-left:8px}
 
 /* ── Stat cards ── */
 .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;margin-bottom:20px}
-.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:17px 18px}
-.stat-card .sl{font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px}
-.stat-card .sv{font-size:26px;font-weight:800;line-height:1}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.stat-card .sl{font-size:12px;color:var(--text-muted);font-weight:600;margin-bottom:8px}
+.stat-card .sv{font-size:28px;font-weight:800;line-height:1;letter-spacing:-.8px}
 .stat-card .sd{font-size:11px;color:var(--text-muted);margin-top:4px}
-.stat-card.accent{border-left:4px solid var(--primary)}
-.stat-card.green{border-left:4px solid var(--success)}
-.stat-card.yellow{border-left:4px solid var(--warning)}
-.stat-card.red{border-left:4px solid var(--danger)}
+.stat-card.accent{}
+.stat-card.green{}
+.stat-card.yellow{}
+.stat-card.red{}
 
 /* ── Cards ── */
-.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:18px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:22px;margin-bottom:16px}
 .card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
-.card-title{font-size:13px;font-weight:700}
+.card-title{font-size:15px;font-weight:700;letter-spacing:-.3px}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:13px}
 
 /* ── Alert banners ── */
 .alert-list{margin-bottom:18px;display:flex;flex-direction:column;gap:7px}
-.alert{display:flex;align-items:center;gap:10px;padding:10px 13px;border-radius:8px;font-size:13px}
-.alert-warn{background:var(--warning-light);color:#78350f;border:1px solid #fde68a}
-.alert-ok{background:var(--success-light);color:#065f46;border:1px solid #6ee7b7}
-.alert-danger{background:var(--danger-light);color:#7f1d1d;border:1px solid #fca5a5}
+.alert{display:flex;align-items:center;gap:10px;padding:13px 15px;border-radius:12px;font-size:13px}
+.alert-warn{background:var(--warning-light);color:#96530a;border:none}
+.alert-ok{background:var(--success-light);color:#00794c;border:none}
+.alert-danger{background:var(--danger-light);color:#c0303c;border:none}
 .alert .at{font-weight:700;min-width:56px}
 
 /* ── Table ── */
 .table-wrap{overflow-x:auto}
 table{width:100%;border-collapse:collapse;font-size:13px}
-thead th{padding:8px 11px;text-align:left;font-weight:700;font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;background:var(--bg);border-bottom:1px solid var(--border)}
-tbody td{padding:10px 11px;border-bottom:1px solid var(--border);vertical-align:middle}
+thead th{padding:12px 12px;text-align:left;font-weight:600;font-size:12px;color:var(--text-muted);background:var(--surface);border-bottom:1px solid var(--border-strong)}
+tbody td{padding:13px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
 tbody tr:last-child td{border-bottom:none}
-tbody tr:hover{background:#fafafa}
+tbody tr:hover{background:var(--bg)}
 
-.hint-inline{font-size:11px;color:var(--text-muted);background:var(--bg);border-radius:7px;padding:7px 11px;margin-bottom:10px}
+.hint-inline{font-size:12px;color:var(--text-muted);background:var(--bg);border-radius:10px;padding:11px 14px;margin-bottom:12px;line-height:1.6}
+.check-row{display:flex;gap:9px;align-items:flex-start;background:var(--bg);border-radius:12px;padding:13px 15px;cursor:pointer;margin-bottom:14px}
+.check-row input{margin-top:2px;width:16px;height:16px;accent-color:var(--primary);flex-shrink:0}
+.check-row strong{display:block;font-size:13px;font-weight:700}
+.check-row em{display:block;font-size:11px;color:var(--text-muted);font-style:normal;margin-top:3px;line-height:1.6}
 
 /* ── 목록 관리 ── */
-.list-head{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px}
+.list-head{font-size:12px;font-weight:700;color:var(--text);margin-bottom:9px}
 .chip-list{display:flex;flex-wrap:wrap;gap:5px;min-height:30px;margin-bottom:9px}
-.mng-chip{display:inline-flex;align-items:center;gap:5px;background:var(--bg);border:1px solid var(--border);border-radius:16px;padding:3px 5px 3px 10px;font-size:12px;white-space:nowrap}
+.mng-chip{display:inline-flex;align-items:center;gap:5px;background:var(--bg);border:none;border-radius:10px;padding:6px 7px 6px 12px;font-size:12px;font-weight:600;white-space:nowrap}
 .mng-chip .nm{cursor:pointer;border-bottom:1px dashed transparent}
 .mng-chip:hover .nm{border-bottom-color:var(--text-muted)}
 .mng-chip .st{color:#f59e0b;font-size:10px}
@@ -114,14 +121,14 @@ tbody tr:hover{background:#fafafa}
 .mng-chip button{border:none;background:none;cursor:pointer;color:var(--text-muted);font-size:14px;line-height:1;padding:0 3px;border-radius:50%}
 .mng-chip button:hover{color:var(--danger);background:var(--danger-light)}
 .mng-add{display:flex;gap:5px}
-.mng-add input{flex:1;min-width:0;padding:6px 9px;border:1px solid var(--border);border-radius:7px;font-size:12px;font-family:inherit}
+.mng-add input{flex:1;min-width:0;padding:9px 11px;border:1px solid var(--border-strong);border-radius:10px;font-size:12px;font-family:inherit}
 .mng-add input:focus{outline:none;border-color:var(--primary)}
 
 /* ── 종료일 프리셋 ── */
 .preset-row{display:flex;gap:5px;margin-bottom:6px}
-.preset-btn{flex:1;padding:5px 0;border:1px solid var(--border);background:var(--surface);border-radius:6px;font-size:11px;font-weight:600;color:var(--text-muted);cursor:pointer;transition:all .12s}
-.preset-btn:hover{border-color:var(--primary);color:var(--primary)}
-.preset-btn.active{background:var(--primary-light);border-color:var(--primary);color:var(--primary)}
+.preset-btn{flex:1;padding:7px 0;border:none;background:var(--bg);border-radius:9px;font-size:11px;font-weight:700;color:var(--text-muted);cursor:pointer;transition:all .12s}
+.preset-btn:hover{color:var(--primary)}
+.preset-btn.active{background:var(--primary-light);color:var(--primary)}
 
 /* ── 표에서 바로 수정 ── */
 /* 평소엔 평범한 텍스트로 두고, 클릭했을 때만 입력 컨트롤로 바꾼다.
@@ -133,7 +140,7 @@ tr:hover td.editable .ev{border-bottom-color:var(--border)}
 td.editable .placeholder{color:#c4c8d0}
 .inline-edit{border:1px solid var(--primary);background:var(--surface);border-radius:6px;padding:4px 6px;
   font-size:13px;font-family:inherit;color:var(--text);width:100%;min-width:88px;
-  box-shadow:0 0 0 3px rgba(79,70,229,.1)}
+  box-shadow:0 0 0 3px rgba(49,130,246,.12)}
 .inline-edit:focus{outline:none}
 .inline-edit.num{text-align:right}
 /* 이름 아니면 빈칸(재고)뿐이라 목록 토글은 군더더기다.
@@ -160,7 +167,7 @@ td.editable .placeholder{color:#c4c8d0}
 /* absolute로 두면 위치 기준이 되는 조상이 없어 엉뚱한 곳에 뜬다.
    화면 좌표를 그대로 쓸 수 있게 fixed로 둔다. */
 .head-menu{display:none;position:fixed;z-index:200;background:var(--surface);border:1px solid var(--border);
-  border-radius:9px;box-shadow:0 12px 32px rgba(0,0,0,.14);padding:5px;min-width:170px;max-height:320px;overflow-y:auto}
+  border-radius:14px;box-shadow:0 8px 28px rgba(0,0,0,.10);padding:6px;min-width:180px;max-height:320px;overflow-y:auto}
 .head-menu.open{display:block}
 .head-menu button{display:flex;width:100%;align-items:center;gap:7px;
   border:none;background:none;text-align:left;padding:7px 10px;border-radius:6px;font-size:12px;
@@ -181,7 +188,7 @@ td.editable .placeholder{color:#c4c8d0}
 #sub-table th{white-space:nowrap}
 
 /* ── Badges ── */
-.badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:700}
+.badge{display:inline-flex;align-items:center;padding:4px 9px;border-radius:8px;font-size:11px;font-weight:700}
 .badge-active{background:var(--success-light);color:#065f46}
 .badge-left{background:#f3f4f6;color:#6b7280}
 .badge-expiring{background:var(--warning-light);color:#92400e}
@@ -194,10 +201,10 @@ td.editable .placeholder{color:#c4c8d0}
 .badge-warn{background:var(--warning-light);color:#92400e}
 
 /* ── Buttons ── */
-.btn{display:inline-flex;align-items:center;gap:5px;padding:8px 15px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .12s;white-space:nowrap}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:10px 16px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;border:none;transition:all .12s;white-space:nowrap;letter-spacing:-.2px}
 .btn-primary{background:var(--primary);color:#fff}
 .btn-primary:hover{background:var(--primary-hover)}
-.btn-ghost{background:transparent;color:var(--text-muted);border:1px solid var(--border)}
+.btn-ghost{background:var(--bg);color:var(--text-muted);border:none}
 .btn-ghost:hover{background:var(--bg);color:var(--text)}
 .btn-danger{background:var(--danger);color:#fff}
 .btn-danger:hover{background:#b91c1c}
@@ -241,15 +248,15 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
 .inner-tab.active{color:var(--primary);border-bottom-color:var(--primary)}
 
 /* ── Pool bars ── */
-.pool-bar{height:5px;border-radius:3px;background:#e5e7eb;overflow:hidden;margin-top:7px}
-.pool-bar-fill{height:100%;border-radius:3px;background:var(--primary);transition:width .3s}
-.pool-bar-fill.warn{background:var(--warning)}
-.pool-bar-fill.full{background:var(--danger)}
+.pool-bar{height:6px;border-radius:99px;background:var(--border-strong);overflow:hidden;margin-top:7px}
+.pool-bar-fill{height:100%;border-radius:99px;background:var(--primary);transition:width .3s}
+.pool-bar-fill.warn{background:var(--primary)}
+.pool-bar-fill.full{background:var(--success)}
 .pool-row{display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);margin-top:2px}
 
 /* ── Vendor cards ── */
 .vendor-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:11px;margin-bottom:18px}
-.vendor-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:15px}
+.vendor-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px}
 .vendor-card .vname{font-size:14px;font-weight:800;margin-bottom:3px}
 .vendor-card .vlink{font-size:11px;color:var(--primary);text-decoration:none}
 .vendor-card .vlink:hover{text-decoration:underline}
@@ -444,7 +451,7 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
         <th class="filt" data-f="grade" onclick="openHeadFilter(event,'grade')">등급 <span class="fi">▾</span></th>
         <th class="filt" data-f="category" onclick="openHeadFilter(event,'category')">구분 <span class="fi">▾</span></th>
         <th class="filt" data-f="assignedTo" onclick="openHeadFilter(event,'assignedTo')">배정 <span class="fi">▾</span></th>
-        <th>제품명</th><th>시리얼</th><th>주문일</th><th>종료일</th><th>금액</th><th></th>
+        <th>제품명</th><th>시리얼</th><th>주문일</th><th>종료일</th><th>금액</th><th>장부가액</th><th></th>
       </tr></thead><tbody id="sub-table"></tbody></table></div>
       <div id="head-filter-menu" class="head-menu"></div>
     </div>
@@ -461,6 +468,27 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
     <div class="grid-2">
       <div class="card"><div class="card-header"><div class="card-title">구매처별 월 비용</div></div><div class="chart-wrap"><canvas id="chart-cost-vendor"></canvas></div></div>
       <div class="card"><div class="card-header"><div class="card-title">구매처별 비용 상세</div></div><div class="table-wrap"><table><thead><tr><th>구매처</th><th>구독 수</th><th>월 비용</th><th>연 비용</th></tr></thead><tbody id="cost-table"></tbody></table></div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">감가상각</div>
+        <div style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text-muted)">
+          내용연수
+          <input type="number" id="useful-life" min="1" max="20" style="width:56px;padding:6px 8px;border:1px solid var(--border-strong);border-radius:9px;font-size:12px;font-family:inherit;text-align:right" onchange="setUsefulLife(this.value)">
+          년
+        </div>
+      </div>
+      <div class="hint-inline">
+        정액법·월할 계산입니다. <strong>취득한 달을 1개월로 포함</strong>합니다 (법인세법 시행령 제26조 — 1개월 미만의 일수는 1개월로 계산).<br>
+        구매 항목이 기본 대상이고, 구독이라도 상세에서 <strong>감가상각 대상</strong>을 켜면 포함됩니다. 내용연수는 자산 분류와 회사 신고값에 따라 다르니 세무 담당자에게 확인하세요.
+      </div>
+      <div class="grid-3" style="margin-bottom:16px">
+        <div class="stat-card"><div class="sl">월 감가상각비</div><div class="sv" id="dep-monthly">—</div><div class="sd">원 / 월</div></div>
+        <div class="stat-card"><div class="sl">누적 감가상각</div><div class="sv" id="dep-accum">—</div><div class="sd">원</div></div>
+        <div class="stat-card"><div class="sl">현재 장부가액</div><div class="sv" id="dep-book">—</div><div class="sd">원</div></div>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>구매처</th><th>제품명</th><th>취득일</th><th>취득가액</th><th>경과</th><th>월 상각비</th><th>누적 상각</th><th>장부가액</th></tr></thead><tbody id="dep-table"></tbody><tfoot id="dep-foot"></tfoot></table></div>
     </div>
   </div>
 
@@ -587,6 +615,10 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
       <div class="form-group" id="grp-monthly"><label class="form-label">월 구독료 (₩)</label><input class="form-control" id="sub-monthly" type="number" placeholder="0"></div>
       <div class="form-group" id="grp-price"><label class="form-label">구매가 (₩)</label><input class="form-control" id="sub-price" type="number" placeholder="0"></div>
     </div>
+    <label class="check-row"><input type="checkbox" id="sub-depreciate"><span>
+      <strong>감가상각 대상</strong>
+      <em>구매는 기본 대상입니다. 구독이라도 계약 종료 시 소유권이 넘어오면(할부·금융리스) 켜세요.</em>
+    </span></label>
     <div class="form-group"><label class="form-label">메모</label><input class="form-control" id="sub-notes" placeholder="선택 사항"></div>
     <hr class="section-divider">
     <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:10px">📱 기기 정보 (선택)</div>
@@ -825,6 +857,31 @@ const DEFAULT_GRADES = [
 ];
 function deviceTypes() { return (db.settings&&db.settings.deviceTypes)||DEFAULT_DEVICE_TYPES; }
 function grades()      { return (db.settings&&db.settings.grades)||DEFAULT_GRADES; }
+
+// ── 감가상각 ────────────────────────────────────────
+// 법인세법 시행령 제26조에 따라 월할 계산한다. 일·주 단위 상각은 세법에 없다.
+// 월수는 역으로 세되 1개월 미만의 일수도 1개월로 치므로, 취득한 달을 통째로 포함한다.
+// 내용연수는 자산 분류·회사 신고값에 따라 달라져 설정에서 바꾼다(기구·비품은 통상 4~6년).
+const DEFAULT_USEFUL_LIFE=5;
+function usefulLife(){ return Number(db.settings&&db.settings.usefulLifeYears)||DEFAULT_USEFUL_LIFE; }
+// 구매는 기본 상각 대상, 구독은 제외. 다만 계약이 소유권 이전형이면 항목별로 켤 수 있다.
+function isDepreciable(s){ return s.depreciate===undefined ? s.category==='asset' : !!s.depreciate; }
+function monthsElapsed(from,to){
+  if(!from) return 0;
+  const [ay,am]=from.split('-').map(Number);
+  const [by,bm]=to.split('-').map(Number);
+  return Math.max((by-ay)*12+(bm-am)+1,0); // 취득한 달을 1개월로 포함
+}
+function depreciation(s){
+  if(!isDepreciable(s)) return null;
+  const price=Number(s.purchasePrice)||0;
+  if(!price||!s.orderDate) return null;
+  const totalMonths=usefulLife()*12;
+  const monthly=price/totalMonths;
+  const used=Math.min(monthsElapsed(s.orderDate,today()),totalMonths);
+  const accumulated=monthly*used;
+  return {price,totalMonths,monthly,used,accumulated,book:Math.max(price-accumulated,0),done:used>=totalMonths};
+}
 function gradeStars(g) { const f=grades().find(x=>x.key===g); return f?f.stars:0; }
 // 목록에 없는 값을 입력하면 그대로 추가한다. 오타도 새 항목이 되므로
 // 잘못 들어간 건 구매처 페이지의 '목록 관리'에서 지운다.
@@ -871,10 +928,11 @@ function loadDB() {
     if (!db.settings) db.settings = { deviceTypes:[...DEFAULT_DEVICE_TYPES], grades:DEFAULT_GRADES.map(g=>({...g})) };
     if (!db.settings.deviceTypes) db.settings.deviceTypes=[...DEFAULT_DEVICE_TYPES];
     if (!db.settings.grades) db.settings.grades=DEFAULT_GRADES.map(g=>({...g}));
+    if (!db.settings.usefulLifeYears) db.settings.usefulLifeYears=DEFAULT_USEFUL_LIFE;
   }
   else {
     db = {
-      settings: { deviceTypes:[...DEFAULT_DEVICE_TYPES], grades:DEFAULT_GRADES.map(g=>({...g})) },
+      settings: { deviceTypes:[...DEFAULT_DEVICE_TYPES], grades:DEFAULT_GRADES.map(g=>({...g})), usefulLifeYears:DEFAULT_USEFUL_LIFE },
       vendors: [
         {id:'v1',name:'고위드',url:'https://www.gowid.com/newpages/spend-optimization/devices',memo:'노트북 구독 서비스'},
         {id:'v2',name:'페이시',url:'https://www.pacey.co.kr/mypage/index.php',memo:'노트북 렌탈 서비스'}
@@ -1289,11 +1347,11 @@ function renderHeadMenu(field){
   // 값을 onclick 속성 문자열에 끼워 넣으면 따옴표가 섞이는 순간 속성이 깨진다.
   // 값은 클로저로 넘기고 리스너를 직접 붙인다.
   menu.innerHTML='';
-  const mkBtn=(label,count,checked,onClick,isAll)=>{
+  const mkBtn=(label,count,checked,onClick)=>{
     const b=document.createElement('button');
     if(checked) b.className='sel';
     const mark=document.createElement('span');
-    mark.className='ck'; mark.textContent=isAll?'':(checked?'☑':'☐');
+    mark.className='ck'; mark.textContent=checked?'☑':'☐';
     b.appendChild(mark);
     const t=document.createElement('span'); t.className='tx'; t.textContent=label;
     b.appendChild(t);
@@ -1302,13 +1360,21 @@ function renderHeadMenu(field){
     b.addEventListener('click',ev=>{ ev.stopPropagation(); onClick(); });
     return b;
   };
-  menu.appendChild(mkBtn('전체',base.length,!sel.length,()=>{
-    headFilters[field]=[]; renderSubscriptions(); renderHeadMenu(field);
-  },true));
+  // '전체'는 모두 선택으로 동작한다. 전부 켠 뒤 하나만 빼는 쓰임이 많아서다.
+  // 이미 전부 켜져 있으면 누를 때 비운다(= 필터 없음, 결과는 동일하지만 체크가 풀린다).
+  const allOn=keys.length>0&&keys.every(k=>sel.includes(k));
+  menu.appendChild(mkBtn('전체',base.length,allOn||!sel.length,()=>{
+    headFilters[field]=allOn?[]:keys.slice();
+    renderSubscriptions(); renderHeadMenu(field);
+  }));
   menu.appendChild(document.createElement('hr'));
   keys.forEach(k=>menu.appendChild(mkBtn(headValueLabel(field,k),counts[k],sel.includes(k),()=>{
-    const i=sel.indexOf(k);
-    if(i>=0) sel.splice(i,1); else sel.push(k);
+    // 아무것도 안 켠 상태(=전체)에서 하나를 끄려는 것이면, 전부 켜고 그것만 뺀다
+    if(!sel.length){ headFilters[field]=keys.filter(x=>x!==k); }
+    else {
+      const i=sel.indexOf(k);
+      if(i>=0) sel.splice(i,1); else sel.push(k);
+    }
     renderSubscriptions(); renderHeadMenu(field);
   })));
 }
@@ -1353,7 +1419,7 @@ function renderSubscriptions(){
   document.getElementById('clear-filters').style.display=anyFilter?'':'none';
 
   const tbody=document.getElementById('sub-table');
-  if(!list.length){tbody.innerHTML=`<tr><td colspan="11"><div class="empty"><div class="ei">📋</div><div class="et">항목 없음</div><div class="ed">${anyFilter?'필터를 해제해보세요':''}</div></div></td></tr>`;return;}
+  if(!list.length){tbody.innerHTML=`<tr><td colspan="12"><div class="empty"><div class="ei">📋</div><div class="et">항목 없음</div><div class="ed">${anyFilter?'필터를 해제해보세요':''}</div></div></td></tr>`;return;}
   tbody.innerHTML=list.map(s=>{
     const dl=daysLeft(s.endDate);
     const dueBadge=s.endDate?` <span class="badge ${dl<=0?'badge-expired':dl<=30?'badge-expiring':dl<=90?'badge-warn':'badge-ok'}">${dl<=0?'만료':dl+'일'}</span>`:'';
@@ -1376,6 +1442,11 @@ function renderSubscriptions(){
       <td class="date">${s.orderDate||'—'}</td>
       <td class="date">${s.endDate?`${s.endDate}${dueBadge}`:'<span style="color:var(--text-muted)">무기한</span>'}</td>
       <td class="amt">${amtVal?fmtPrice(amtVal):'<span style="color:var(--text-muted)">—</span>'}</td>
+      ${(()=>{const d=depreciation(s);
+        if(!d) return '<td class="amt"><span style="color:var(--text-muted)">—</span></td>';
+        return `<td class="amt" title="취득 ${fmtPrice(d.price)} · ${d.used}/${d.totalMonths}개월 경과 · 누적 ${fmtPrice(Math.round(d.accumulated))}">
+          <div>${fmtPrice(Math.round(d.book))}</div>
+          <div style="font-size:10px;color:var(--text-muted)">${d.done?'상각 완료':`${d.used}/${d.totalMonths}개월`}</div></td>`;})()}
       <td><div class="actions-cell">
         <button class="btn btn-ghost btn-sm" onclick="editSub('${s.id}')">상세</button>
         <button class="btn btn-danger btn-sm" onclick="deleteSub('${s.id}')">삭제</button>
@@ -1453,6 +1524,7 @@ function inlineEmp(id,field,value){
 // ── 모달 헬퍼 ────────────────────────────────────────
 function onCategoryChange(){
   const isSub=document.getElementById('sub-category').value==='subscription';
+  document.getElementById('sub-depreciate').checked=!isSub;
   document.getElementById('grp-monthly').style.display=isSub?'':'none';
   document.getElementById('grp-price').style.display=isSub?'none':'';
 }
@@ -1488,6 +1560,7 @@ function openAddSub(){
   document.getElementById('modal-sub-title').textContent='📋 구독·자산 추가';
   document.getElementById('sub-vendor').value='';
   document.getElementById('sub-category').value='subscription';
+  document.getElementById('sub-depreciate').checked=false;
   populateSubSelects('','');
   document.getElementById('sub-order').value=today();
   document.getElementById('sub-end').value='';
@@ -1515,6 +1588,7 @@ function editSub(id){
   document.getElementById('modal-sub-title').textContent='✏️ 수정';
   document.getElementById('sub-vendor').value=s.vendor;
   document.getElementById('sub-category').value=s.category;
+  document.getElementById('sub-depreciate').checked=isDepreciable(s);
   populateSubSelects(s.deviceType||'',s.grade||'');
   document.getElementById('sub-order').value=s.orderDate;
   document.getElementById('sub-end').value=s.endDate;
@@ -1553,7 +1627,7 @@ function saveSubscription(){
   const assignedTo=ensureEmployee(assignedName);
   const isSub=category==='subscription';
   const editId=document.getElementById('edit-sub-id').value;
-  const data={vendor,deviceType,grade,category,assignedTo,orderDate:document.getElementById('sub-order').value,endDate:document.getElementById('sub-end').value,monthlyPrice:isSub?(Number(document.getElementById('sub-monthly').value)||0):0,purchasePrice:isSub?0:(Number(document.getElementById('sub-price').value)||0),notes:document.getElementById('sub-notes').value.trim(),deviceName:document.getElementById('sub-devicename').value.trim(),manufacturer:document.getElementById('sub-manufacturer').value.trim(),productName:document.getElementById('sub-productname').value.trim(),serialNo:document.getElementById('sub-serial').value.trim(),modelNo:document.getElementById('sub-model').value.trim(),specs:document.getElementById('sub-specs').value.trim()};
+  const data={vendor,deviceType,grade,category,assignedTo,depreciate:document.getElementById('sub-depreciate').checked,orderDate:document.getElementById('sub-order').value,endDate:document.getElementById('sub-end').value,monthlyPrice:isSub?(Number(document.getElementById('sub-monthly').value)||0):0,purchasePrice:isSub?0:(Number(document.getElementById('sub-price').value)||0),notes:document.getElementById('sub-notes').value.trim(),deviceName:document.getElementById('sub-devicename').value.trim(),manufacturer:document.getElementById('sub-manufacturer').value.trim(),productName:document.getElementById('sub-productname').value.trim(),serialNo:document.getElementById('sub-serial').value.trim(),modelNo:document.getElementById('sub-model').value.trim(),specs:document.getElementById('sub-specs').value.trim()};
   if(editId){
     const idx=db.subscriptions.findIndex(s=>s.id===editId);
     const old=db.subscriptions[idx];
@@ -1569,6 +1643,44 @@ function saveSubscription(){
   renderSubscriptions();
   if(currentPage==='dashboard') renderDashboard();
 }
+// ── 감가상각 화면 ────────────────────────────────────
+function setUsefulLife(v){
+  const y=Math.max(1,Math.min(20,Number(v)||DEFAULT_USEFUL_LIFE));
+  const prev=usefulLife();
+  if(y===prev){ renderCosts(); return; }
+  db.settings.usefulLifeYears=y;
+  saveDB();
+  addHistory('edit','내용연수 변경',`${prev}년 → ${y}년`);
+  renderCosts();
+  if(currentPage==='subscriptions') renderSubscriptions();
+}
+function renderDepreciation(){
+  document.getElementById('useful-life').value=usefulLife();
+  const rows=db.subscriptions.map(s=>({s,d:depreciation(s)})).filter(x=>x.d)
+    .sort((a,b)=>b.d.book-a.d.book);
+  const sum=rows.reduce((a,x)=>({
+    monthly:a.monthly+(x.d.done?0:x.d.monthly), // 상각 끝난 자산은 더 이상 비용이 안 잡힌다
+    accum:a.accum+x.d.accumulated,
+    book:a.book+x.d.book
+  }),{monthly:0,accum:0,book:0});
+  document.getElementById('dep-monthly').textContent=Math.round(sum.monthly).toLocaleString();
+  document.getElementById('dep-accum').textContent=Math.round(sum.accum).toLocaleString();
+  document.getElementById('dep-book').textContent=Math.round(sum.book).toLocaleString();
+  document.getElementById('dep-table').innerHTML=rows.map(({s,d})=>`<tr>
+      <td><span class="badge badge-primary">${s.vendor}</span></td>
+      <td>${subLabel(s)}</td>
+      <td class="date">${s.orderDate}</td>
+      <td class="amt">${fmtPrice(d.price)}</td>
+      <td>${d.used}/${d.totalMonths}개월${d.done?' <span class="badge badge-gray">완료</span>':''}</td>
+      <td class="amt">${d.done?'—':fmtPrice(Math.round(d.monthly))}</td>
+      <td class="amt">${fmtPrice(Math.round(d.accumulated))}</td>
+      <td class="amt"><strong>${fmtPrice(Math.round(d.book))}</strong></td>
+    </tr>`).join('')
+    ||'<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:20px">감가상각 대상 자산이 없습니다. 구매 항목에 구매가와 주문일을 넣으면 여기에 나옵니다.</td></tr>';
+  document.getElementById('dep-foot').innerHTML=rows.length
+    ?`<tr style="background:var(--bg);font-weight:700"><td colspan="3">합계 ${rows.length}건</td><td class="amt">${fmtPrice(Math.round(rows.reduce((a,x)=>a+x.d.price,0)))}</td><td></td><td class="amt">${fmtPrice(Math.round(sum.monthly))}</td><td class="amt">${fmtPrice(Math.round(sum.accum))}</td><td class="amt">${fmtPrice(Math.round(sum.book))}</td></tr>`:'';
+}
+
 // ═══════════════════════════════════════════════════════
 // 엑셀 가져오기 / 내보내기
 // ═══════════════════════════════════════════════════════
@@ -1784,6 +1896,7 @@ function renderCosts(){
   const vm={};
   subs.forEach(s=>{vm[s.vendor]=vm[s.vendor]||{count:0,monthly:0};vm[s.vendor].count++;vm[s.vendor].monthly+=Number(s.monthlyPrice)||0;});
   document.getElementById('cost-table').innerHTML=Object.entries(vm).sort((a,b)=>b[1].monthly-a[1].monthly).map(([v,d])=>`<tr><td><span class="badge badge-primary">${v}</span></td><td>${d.count}</td><td>${fmtPrice(d.monthly)}</td><td>${fmtPrice(d.monthly*12)}</td></tr>`).join('')||'<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:16px">데이터 없음</td></tr>';
+  renderDepreciation();
   const labels=Object.keys(vm), vals=labels.map(l=>vm[l].monthly), colors=Object.values(vendorColors(labels));
   if(costChart) costChart.destroy();
   costChart=new Chart(document.getElementById('chart-cost-vendor'),{type:'bar',data:{labels,datasets:[{data:vals,backgroundColor:colors,borderRadius:6,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{callback:v=>'₩'+v.toLocaleString()}}}}});
