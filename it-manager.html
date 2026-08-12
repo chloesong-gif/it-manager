@@ -190,6 +190,30 @@ td.editable .placeholder{color:#c4c8d0}
 .head-menu button .n{color:var(--text-muted);font-size:11px}
 .head-menu button.sel .n{color:var(--primary)}
 .head-menu hr{border:none;border-top:1px solid var(--border);margin:4px 0}
+.menu-search{width:100%;padding:8px 10px;border:1px solid var(--border-strong);border-radius:9px;
+  font-size:12px;font-family:inherit;margin-bottom:5px}
+.menu-search:focus{outline:none;border-color:var(--primary)}
+.menu-none{padding:10px;text-align:center;font-size:11px;color:var(--text-muted)}
+
+/* ── 콤보박스 (직접 입력 + 목록에서 고르기) ── */
+/* datalist는 이미 값이 들어있으면 그 값과 일치하는 항목만 보여줘서
+   다른 값으로 바꾸려면 지우고 다시 쳐야 한다. 그래서 직접 만든다. */
+.combo{position:relative}
+.combo input{padding-right:32px}
+.combo-toggle{position:absolute;right:1px;top:1px;bottom:1px;width:30px;border:none;background:none;
+  cursor:pointer;color:var(--text-muted);font-size:11px;border-radius:0 9px 9px 0}
+.combo-toggle:hover{color:var(--primary)}
+.combo-panel{display:none;position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:60;
+  background:var(--surface);border:1px solid var(--border-strong);border-radius:12px;
+  box-shadow:0 8px 24px rgba(0,0,0,.10);padding:5px;max-height:210px;overflow-y:auto}
+.combo-panel.open{display:block}
+.combo-opt{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;
+  border:none;background:none;text-align:left;padding:8px 10px;border-radius:8px;
+  font-size:13px;font-family:inherit;color:var(--text);cursor:pointer}
+.combo-opt:hover{background:var(--bg)}
+.combo-opt.on{background:var(--primary-light);color:var(--primary);font-weight:700}
+.combo-opt .sub{font-size:11px;color:var(--text-muted)}
+.combo-new{font-size:11px;color:var(--text-muted);padding:8px 10px;border-top:1px solid var(--border);margin-top:4px}
 #sub-table .prod{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px}
 #sub-table .spec{font-size:10px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px}
 #sub-table .serial{font-family:monospace;font-size:11px;color:var(--text-muted);white-space:nowrap}
@@ -622,24 +646,20 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
     </div>
     <div class="form-row">
       <div class="form-group"><label class="form-label">장비 유형 *</label>
-        <input class="form-control" id="sub-devicetype" list="devicetype-list" placeholder="노트북" autocomplete="off">
-        <datalist id="devicetype-list"></datalist>
+        <div class="combo"><input class="form-control" id="sub-devicetype" placeholder="노트북" autocomplete="off"><button type="button" class="combo-toggle">▼</button><div class="combo-panel"></div></div>
         <div class="form-hint">목록에 없으면 그냥 입력하세요. 새 유형으로 저장됩니다.</div>
       </div>
       <div class="form-group"><label class="form-label">등급</label>
-        <input class="form-control" id="sub-grade" list="grade-list" placeholder="프론트용" autocomplete="off">
-        <datalist id="grade-list"></datalist>
+        <div class="combo"><input class="form-control" id="sub-grade" placeholder="프론트용" autocomplete="off"><button type="button" class="combo-toggle">▼</button><div class="combo-panel"></div></div>
         <div class="form-hint">새 등급은 별점 0으로 추가됩니다.</div>
       </div>
     </div>
     <div class="form-group"><label class="form-label">용도</label>
-      <input class="form-control" id="sub-purpose" list="purpose-list" placeholder="기본" autocomplete="off">
-      <datalist id="purpose-list"></datalist>
+      <div class="combo"><input class="form-control" id="sub-purpose" placeholder="기본" autocomplete="off"><button type="button" class="combo-toggle">▼</button><div class="combo-panel"></div></div>
       <div class="form-hint">비워두면 기본입니다. 크롤링용·타운홀용처럼 새 용도를 치면 목록에 추가됩니다.</div>
     </div>
     <div class="form-group"><label class="form-label">배정 구성원</label>
-      <input class="form-control" id="sub-assigned" list="employee-list" placeholder="비워두면 재고" autocomplete="off">
-      <datalist id="employee-list"></datalist>
+      <div class="combo"><input class="form-control" id="sub-assigned" placeholder="비워두면 재고" autocomplete="off"><button type="button" class="combo-toggle">▼</button><div class="combo-panel"></div></div>
       <div class="form-hint">새 이름을 치면 구성원으로 자동 등록됩니다.</div>
     </div>
     <div class="form-row">
@@ -874,6 +894,7 @@ function enterApp() {
   document.getElementById('sidebar-name').textContent = currentUser.name;
   document.getElementById('sidebar-email').textContent = currentUser.email;
   loadDB();
+  initAllCombos();
   renderSubscriptions(); // 로그인 후 첫 화면은 구독·자산
 }
 
@@ -1402,12 +1423,14 @@ function headValueLabel(field,v){
   if(field==='grade') return gradeLabel(v);
   return v;
 }
+let headSearch='';
 function openHeadFilter(ev,field){
   ev.stopPropagation();
   const menu=document.getElementById('head-filter-menu');
   if(menu.classList.contains('open')&&menu.dataset.field===field){ menu.classList.remove('open'); return; }
   menu.dataset.field=field;
   menu.classList.add('open');
+  headSearch='';
   renderHeadMenu(field);
   // fixed라 화면 좌표를 그대로 쓴다. 화면 밖으로 나가지 않게 가장자리에서 접어 넣는다.
   const th=ev.currentTarget.getBoundingClientRect();
@@ -1433,6 +1456,7 @@ function renderHeadMenu(field){
   const mkBtn=(label,count,checked,onClick)=>{
     const b=document.createElement('button');
     if(checked) b.className='sel';
+    b.dataset.label=String(label).toLowerCase();
     const mark=document.createElement('span');
     mark.className='ck'; mark.textContent=checked?'☑':'☐';
     b.appendChild(mark);
@@ -1443,6 +1467,29 @@ function renderHeadMenu(field){
     b.addEventListener('click',ev=>{ ev.stopPropagation(); onClick(); });
     return b;
   };
+  // 목록이 길어지면(구성원·구매처 등) 검색으로 좁힌다.
+  // 입력할 때마다 메뉴를 다시 그리면 포커스가 날아가므로 버튼을 숨기고 보이는 방식으로 거른다.
+  const applySearch=()=>{
+    const q=headSearch.trim().toLowerCase();
+    let shown=0;
+    menu.querySelectorAll('button[data-label]').forEach(b=>{
+      const hit=!q||b.dataset.label.includes(q);
+      b.style.display=hit?'':'none';
+      if(hit) shown++;
+    });
+    const none=menu.querySelector('.menu-none');
+    if(none) none.style.display=shown?'none':'';
+  };
+  if(keys.length>3){ // 구독/구매처럼 두세 개뿐인 열에는 굳이 붙이지 않는다
+    const box=document.createElement('input');
+    box.className='menu-search';
+    box.placeholder='검색…';
+    box.value=headSearch;
+    box.addEventListener('click',ev=>ev.stopPropagation());
+    box.addEventListener('keydown',ev=>ev.stopPropagation());
+    box.addEventListener('input',ev=>{ headSearch=ev.target.value; applySearch(); });
+    menu.appendChild(box);
+  }
   // '전체'는 모두 선택으로 동작한다. 전부 켠 뒤 하나만 빼는 쓰임이 많아서다.
   // 이미 전부 켜져 있으면 누를 때 비운다(= 필터 없음, 결과는 동일하지만 체크가 풀린다).
   const allOn=keys.length>0&&keys.every(k=>sel.includes(k));
@@ -1451,6 +1498,7 @@ function renderHeadMenu(field){
     renderSubscriptions(); renderHeadMenu(field);
   }));
   menu.appendChild(document.createElement('hr'));
+  const noneEl=document.createElement('div'); noneEl.className='menu-none'; noneEl.textContent='결과 없음'; noneEl.style.display='none';
   keys.forEach(k=>menu.appendChild(mkBtn(headValueLabel(field,k),counts[k],sel.includes(k),()=>{
     // 체크가 보이는 그대로 켜고 끈다. 꺼져 있는 걸 누르면 그것만 켜진다.
     // (전부 켠 뒤 하나만 빼려면 '전체'를 먼저 누르면 된다)
@@ -1458,6 +1506,8 @@ function renderHeadMenu(field){
     if(i>=0) sel.splice(i,1); else sel.push(k);
     renderSubscriptions(); renderHeadMenu(field);
   })));
+  menu.appendChild(noneEl);
+  applySearch(); // 항목을 켜고 끈 뒤 다시 그려도 검색어는 유지된다
 }
 function clearHeadFilters(){
   Object.keys(headFilters).forEach(k=>headFilters[k]=[]);
@@ -1603,6 +1653,59 @@ function inlineEmp(id,field,value){
   if(currentPage==='dashboard') renderDashboard();
 }
 
+// ── 콤보박스 ─────────────────────────────────────────
+// 직접 입력해서 새 값을 만들 수도 있고, ▼를 눌러 기존 목록에서 고를 수도 있다.
+// (native datalist는 칸에 값이 들어 있으면 그 값과 일치하는 항목만 보여줘서
+//  다른 값으로 바꾸려면 지웠다 다시 쳐야 했다)
+function initCombo(inputId,optionsFn){
+  const input=document.getElementById(inputId); if(!input) return;
+  const wrap=input.closest('.combo');
+  const panel=wrap.querySelector('.combo-panel');
+  const toggle=wrap.querySelector('.combo-toggle');
+  const close=()=>panel.classList.remove('open');
+  const render=q=>{
+    const key=(q||'').trim().toLowerCase();
+    const cur=input.value.trim();
+    const opts=optionsFn();
+    panel.innerHTML='';
+    opts.filter(o=>!key||String(o.label).toLowerCase().includes(key)).forEach(o=>{
+      const b=document.createElement('button');
+      b.type='button';
+      b.className='combo-opt'+(o.value===cur?' on':'');
+      const t=document.createElement('span'); t.textContent=o.label; b.appendChild(t);
+      if(o.sub){ const sp=document.createElement('span'); sp.className='sub'; sp.textContent=o.sub; b.appendChild(sp); }
+      // blur보다 먼저 잡아야 선택이 씹히지 않는다
+      b.addEventListener('mousedown',ev=>{ ev.preventDefault(); input.value=o.value; close(); });
+      panel.appendChild(b);
+    });
+    if(cur&&!opts.some(o=>o.value===cur)){
+      const n=document.createElement('div'); n.className='combo-new';
+      n.textContent='"'+cur+'" — 새 항목으로 추가됩니다';
+      panel.appendChild(n);
+    } else if(!panel.children.length){
+      const n=document.createElement('div'); n.className='combo-new'; n.textContent='항목 없음';
+      panel.appendChild(n);
+    }
+  };
+  // ▼를 누르면 지금 값과 상관없이 전체 목록을 보여준다
+  toggle.addEventListener('click',ev=>{
+    ev.preventDefault(); ev.stopPropagation();
+    if(panel.classList.contains('open')){ close(); return; }
+    render(''); panel.classList.add('open'); input.focus();
+  });
+  input.addEventListener('focus',()=>{ render(''); panel.classList.add('open'); });
+  input.addEventListener('input',()=>{ render(input.value); panel.classList.add('open'); });
+  input.addEventListener('blur',()=>setTimeout(close,150));
+  input.addEventListener('keydown',ev=>{ if(ev.key==='Escape') close(); });
+  wrap.addEventListener('click',ev=>ev.stopPropagation());
+}
+function initAllCombos(){
+  initCombo('sub-devicetype',()=>deviceTypes().map(t=>({value:t,label:t})));
+  initCombo('sub-grade',()=>grades().map(g=>({value:g.key,label:g.key,sub:g.stars?'★'.repeat(g.stars):''})));
+  initCombo('sub-purpose',()=>purposes().map(t=>({value:t,label:t})));
+  initCombo('sub-assigned',()=>activeEmps().map(e=>({value:e.name,label:e.name})));
+}
+
 // ── 모달 헬퍼 ────────────────────────────────────────
 function onCategoryChange(){
   const isSub=document.getElementById('sub-category').value==='subscription';
@@ -1633,10 +1736,7 @@ function populateSubSelects(deviceType,grade,purpose){
   document.getElementById('sub-devicetype').value=deviceType||'';
   document.getElementById('sub-grade').value=grade||'';
   document.getElementById('sub-purpose').value=purpose||'';
-  document.getElementById('devicetype-list').innerHTML=deviceTypes().map(t=>`<option value="${t}">`).join('');
-  document.getElementById('grade-list').innerHTML=grades().map(g=>`<option value="${g.key}">${g.stars?'★'.repeat(g.stars):''}</option>`).join('');
-  document.getElementById('purpose-list').innerHTML=purposes().map(t=>`<option value="${t}">`).join('');
-  document.getElementById('employee-list').innerHTML=activeEmps().map(e=>`<option value="${e.name}">`).join('');
+
 }
 
 function openAddSub(){
