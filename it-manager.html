@@ -218,6 +218,9 @@ td.editable .placeholder{color:#c4c8d0}
 .combo-opt .sub{font-size:11px;color:var(--text-muted)}
 .combo-new{font-size:11px;color:var(--text-muted);padding:8px 10px;border-top:1px solid var(--border);margin-top:4px}
 #sub-table .prod{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px}
+#sub-table .prod-cell{cursor:pointer}
+#sub-table .prod-cell:hover{background:var(--primary-light)}
+#sub-table .prod-cell:hover .prod{color:var(--primary);text-decoration:underline}
 #sub-table .spec{font-size:10px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px}
 #sub-table .serial{font-family:monospace;font-size:11px;color:var(--text-muted);white-space:nowrap}
 #sub-table .amt{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -1579,7 +1582,7 @@ function renderSubscriptions(){
       <td>${s.purpose&&s.purpose!==DEFAULT_PURPOSE?`<span class="badge badge-warn">${s.purpose}</span>`:`<span style="color:var(--text-muted)">${s.purpose||DEFAULT_PURPOSE}</span>`}</td>
       <td>${isSub?'<span class="badge badge-sub">구독</span>':'<span class="badge badge-asset">구매</span>'}</td>
       <td class="editable" title="클릭해서 배정 변경" onclick="editCell(this,'${s.id}','assignedTo')"><span class="ev${s.assignedTo?'':' placeholder'}">${s.assignedTo?`<span class="chip chip-member">${empById(s.assignedTo)?.name||'?'}</span>`:'재고'}</span></td>
-      <td><div class="prod" title="${prodName}">${prodName}</div>${s.specs?`<div class="spec" title="${s.specs}">${s.specs}</div>`:''}</td>
+      <td class="prod-cell" title="눌러서 상세 보기" onclick="editSub('${s.id}')"><div class="prod">${prodName}</div>${s.specs?`<div class="spec" title="${s.specs}">${s.specs}</div>`:''}</td>
       <td class="serial">${s.serialNo||'—'}</td>
       <td class="date">${s.orderDate||'—'}</td>
       <td class="date">${s.endDate?`${s.endDate}${dueBadge}`:'<span style="color:var(--text-muted)">무기한</span>'}</td>
