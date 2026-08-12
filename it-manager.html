@@ -115,6 +115,9 @@ tbody tr:hover{background:var(--bg)}
 .calc-box .cf{font-size:12px;color:var(--text-muted);margin-bottom:10px}
 .calc-box .cs{font-size:13px;font-variant-numeric:tabular-nums;margin-bottom:5px}
 .calc-box .cr{font-size:22px;font-weight:800;letter-spacing:-.6px;margin-top:9px;color:var(--primary)}
+.draft-banner{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  background:var(--warning-light);color:#96530a;border-radius:12px;padding:11px 13px;
+  font-size:12px;font-weight:600;margin-bottom:14px}
 .check-row{display:flex;gap:9px;align-items:flex-start;background:var(--bg);border-radius:12px;padding:13px 15px;cursor:pointer;margin-bottom:14px}
 .check-row input{margin-top:2px;width:16px;height:16px;accent-color:var(--primary);flex-shrink:0}
 .check-row strong{display:block;font-size:13px;font-weight:700}
@@ -640,6 +643,10 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
   <div class="modal">
     <div class="modal-header"><div class="modal-title" id="modal-sub-title">📋 구독·자산 추가</div><button class="modal-close" onclick="closeModal('modal-add-sub')">×</button></div>
     <input type="hidden" id="edit-sub-id">
+    <div id="draft-banner" class="draft-banner" style="display:none">
+      <span id="draft-msg"></span>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="discardDraft()">새로 작성</button>
+    </div>
     <div class="form-row">
       <div class="form-group"><label class="form-label">구매처 *</label>
         <div class="combo"><input class="form-control" id="sub-vendor" placeholder="고위드" autocomplete="off"><button type="button" class="combo-toggle">▼</button><div class="combo-panel"></div></div>
@@ -897,6 +904,7 @@ function enterApp() {
   document.getElementById('sidebar-email').textContent = currentUser.email;
   loadDB();
   initAllCombos();
+  initDraftWatch();
   renderSubscriptions(); // 로그인 후 첫 화면은 구독·자산
 }
 
@@ -1655,6 +1663,64 @@ function inlineEmp(id,field,value){
   if(currentPage==='dashboard') renderDashboard();
 }
 
+// ── 작성 중 임시 저장 ────────────────────────────────
+// 브라우저가 꺼지거나 실수로 창을 닫아도 쓰던 내용이 남도록 입력할 때마다 저장한다.
+// 저장이 끝나거나 '새로 작성'을 누르면 지운다.
+const DRAFT_KEY='itm_draft';
+const DRAFT_FIELDS=['sub-vendor','sub-category','sub-devicetype','sub-grade','sub-purpose','sub-assigned',
+  'sub-order','sub-end','sub-monthly','sub-price','sub-notes','sub-devicename','sub-manufacturer',
+  'sub-productname','sub-serial','sub-model','sub-specs'];
+function draftHasContent(f){
+  // 구분·주문일은 열자마자 기본값이 채워지므로 '쓴 내용'으로 치지 않는다
+  return DRAFT_FIELDS.some(id=>{
+    if(id==='sub-category'||id==='sub-order') return false;
+    const v=(f[id]||'').trim();
+    return v!==''&&v!=='0';
+  });
+}
+function saveDraft(){
+  const modal=document.getElementById('modal-add-sub');
+  if(!modal||!modal.classList.contains('open')) return;
+  const f={};
+  DRAFT_FIELDS.forEach(id=>{ const el=document.getElementById(id); if(el) f[id]=el.value; });
+  if(!draftHasContent(f)){ localStorage.removeItem(DRAFT_KEY); return; }
+  localStorage.setItem(DRAFT_KEY,JSON.stringify({
+    editId:document.getElementById('edit-sub-id').value,
+    depreciate:document.getElementById('sub-depreciate').checked,
+    at:new Date().toISOString(), f
+  }));
+}
+function clearDraft(){
+  localStorage.removeItem(DRAFT_KEY);
+  const b=document.getElementById('draft-banner'); if(b) b.style.display='none';
+}
+function discardDraft(){
+  clearDraft();
+  const editId=document.getElementById('edit-sub-id').value;
+  if(editId){ const s=db.subscriptions.find(x=>x.id===editId); if(s){ closeModal('modal-add-sub'); editSub(editId); return; } }
+  closeModal('modal-add-sub'); openAddSub();
+}
+// 열려는 화면과 같은 맥락(신규는 신규끼리, 수정은 같은 항목끼리)일 때만 되살린다
+function restoreDraft(editId){
+  const raw=localStorage.getItem(DRAFT_KEY); if(!raw) return;
+  let d; try{ d=JSON.parse(raw); }catch(e){ localStorage.removeItem(DRAFT_KEY); return; }
+  if((d.editId||'')!==(editId||'')) return;
+  DRAFT_FIELDS.forEach(id=>{ const el=document.getElementById(id); if(el&&d.f[id]!==undefined) el.value=d.f[id]; });
+  onCategoryChange();
+  document.getElementById('sub-depreciate').checked=!!d.depreciate;
+  const when=new Date(d.at);
+  const b=document.getElementById('draft-banner');
+  document.getElementById('draft-msg').textContent=
+    '작성하던 내용을 불러왔습니다 · '+when.toLocaleString('ko-KR',{month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  b.style.display='';
+}
+function initDraftWatch(){
+  const modal=document.getElementById('modal-add-sub');
+  if(!modal) return;
+  modal.addEventListener('input',saveDraft);
+  modal.addEventListener('change',saveDraft);
+}
+
 // ── 콤보박스 ─────────────────────────────────────────
 // 직접 입력해서 새 값을 만들 수도 있고, ▼를 눌러 기존 목록에서 고를 수도 있다.
 // (native datalist는 칸에 값이 들어 있으면 그 값과 일치하는 항목만 보여줘서
@@ -1766,7 +1832,9 @@ function openAddSub(){
   document.getElementById('sub-specs').value='';
   populateSubAssigned('');
   populateVendorDatalist();
+  document.getElementById('draft-banner').style.display='none';
   openModal('modal-add-sub');
+  restoreDraft('');
 }
 function editSub(id){
   const s=db.subscriptions.find(x=>x.id===id);
@@ -1794,7 +1862,9 @@ function editSub(id){
   document.getElementById('sub-specs').value=s.specs||'';
   populateSubAssigned(s.assignedTo||'');
   populateVendorDatalist();
+  document.getElementById('draft-banner').style.display='none';
   openModal('modal-add-sub');
+  restoreDraft(id);
 }
 function populateSubAssigned(sel){
   document.getElementById('sub-assigned').value=empNameOf(sel);
@@ -1825,6 +1895,7 @@ function saveSubscription(){
     addHistory('add',`구독·자산 추가: ${vendor} · ${data.productName||deviceType}`,`${category==='subscription'?'구독':'구매'} | 배정: ${emp?emp.name:'미배정'} | 월비용: ${fmtPrice(data.monthlyPrice)}`);
   }
   saveDB();
+  clearDraft();
   closeModal('modal-add-sub');
   renderSubscriptions();
   if(currentPage==='dashboard') renderDashboard();
