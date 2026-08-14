@@ -197,6 +197,8 @@ td.editable .placeholder{color:#c4c8d0}
   font-size:12px;font-family:inherit;margin-bottom:5px}
 .menu-search:focus{outline:none;border-color:var(--primary)}
 .menu-none{padding:10px;text-align:center;font-size:11px;color:var(--text-muted)}
+.inner-tab span{display:inline-block;margin-left:3px;font-size:11px;color:var(--text-muted);font-weight:600}
+.inner-tab.active span{color:var(--primary)}
 
 /* ── 콤보박스 (직접 입력 + 목록에서 고르기) ── */
 /* datalist는 이미 값이 들어있으면 그 값과 일치하는 항목만 보여줘서
@@ -474,10 +476,10 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
       </div>
     </div>
     <div class="inner-tabs">
-      <button class="inner-tab active" onclick="subTab('all',this)">전체</button>
-      <button class="inner-tab" onclick="subTab('subscription',this)">구독</button>
-      <button class="inner-tab" onclick="subTab('asset',this)">자산</button>
-      <button class="inner-tab" onclick="subTab('unassigned',this)">미배정 재고</button>
+      <button class="inner-tab active" onclick="subTab('all',this)">전체 <span id="tab-cnt-all"></span></button>
+      <button class="inner-tab" onclick="subTab('subscription',this)">구독 <span id="tab-cnt-sub"></span></button>
+      <button class="inner-tab" onclick="subTab('asset',this)">구매 <span id="tab-cnt-asset"></span></button>
+      <button class="inner-tab" onclick="subTab('unassigned',this)">미배정 재고 <span id="tab-cnt-unassigned"></span></button>
     </div>
     <div class="card" style="padding:0">
       <div class="toolbar" style="padding:12px 14px 0">
@@ -1562,8 +1564,22 @@ function renderSubscriptions(){
   });
   document.getElementById('clear-filters').style.display=anyFilter?'':'none';
 
+  // 탭마다 건수를 보여준다. 비어 있는 탭을 눌렀을 때 고장이나 권한 문제로 오해하지 않도록.
+  const all=db.subscriptions;
+  document.getElementById('tab-cnt-all').textContent=all.length;
+  document.getElementById('tab-cnt-sub').textContent=all.filter(s=>s.category==='subscription').length;
+  document.getElementById('tab-cnt-asset').textContent=all.filter(s=>s.category==='asset').length;
+  document.getElementById('tab-cnt-unassigned').textContent=all.filter(s=>!s.assignedTo).length;
+
   const tbody=document.getElementById('sub-table');
-  if(!list.length){tbody.innerHTML=`<tr><td colspan="13"><div class="empty"><div class="ei">📋</div><div class="et">항목 없음</div><div class="ed">${anyFilter?'필터를 해제해보세요':''}</div></div></td></tr>`;return;}
+  if(!list.length){
+    const why=anyFilter?'필터를 해제해보세요'
+      :subCurrentTab==='asset'?'구매로 등록한 항목이 아직 없습니다. 구독 항목은 «구독» 탭에 있습니다.'
+      :subCurrentTab==='subscription'?'구독으로 등록한 항목이 아직 없습니다.'
+      :subCurrentTab==='unassigned'?'모든 항목이 배정되어 있습니다.':'';
+    tbody.innerHTML=`<tr><td colspan="13"><div class="empty"><div class="ei">📋</div><div class="et">항목 없음</div><div class="ed">${why}</div></div></td></tr>`;
+    return;
+  }
   tbody.innerHTML=list.map(s=>{
     const dl=daysLeft(s.endDate);
     const dueBadge=s.endDate?` <span class="badge ${dl<=0?'badge-expired':dl<=30?'badge-expiring':dl<=90?'badge-warn':'badge-ok'}">${dl<=0?'만료':dl+'일'}</span>`:'';
